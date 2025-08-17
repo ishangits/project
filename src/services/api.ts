@@ -1,0 +1,154 @@
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
+
+class ApiService {
+  private api: AxiosInstance;
+
+  constructor() {
+    this.api = axios.create({
+      baseURL: 'http://localhost:5000/api',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    // Response interceptor for error handling
+    this.api.interceptors.response.use(
+      (response: AxiosResponse) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          // Token expired or invalid
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+        }
+        return Promise.reject(error);
+      }
+    );
+  }
+
+  setAuthToken(token: string) {
+    this.api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  }
+
+  clearAuthToken() {
+    delete this.api.defaults.headers.common['Authorization'];
+  }
+
+  // Auth endpoints
+  async login(email: string, password: string) {
+    const response = await this.api.post('/auth/login', { email, password });
+    return response.data;
+  }
+
+  async verifyToken() {
+    const response = await this.api.get('/auth/verify');
+    return response.data;
+  }
+
+  async logout() {
+    const response = await this.api.post('/auth/logout');
+    return response.data;
+  }
+
+  // Domain endpoints
+  async getDomains(params?: any) {
+    const response = await this.api.get('/domains', { params });
+    return response.data;
+  }
+
+  async getDomain(id: string) {
+    const response = await this.api.get(`/domains/${id}`);
+    return response.data;
+  }
+
+  async createDomain(data: any) {
+    const response = await this.api.post('/domains', data);
+    return response.data;
+  }
+
+  async updateDomain(id: string, data: any) {
+    const response = await this.api.put(`/domains/${id}`, data);
+    return response.data;
+  }
+
+  async deleteDomain(id: string) {
+    const response = await this.api.delete(`/domains/${id}`);
+    return response.data;
+  }
+
+  async updateDomainKB(id: string) {
+    const response = await this.api.post(`/domains/${id}/kb-update`);
+    return response.data;
+  }
+
+  // Knowledge Base endpoints
+  async getKBEntries(domainId: string, params?: any) {
+    const response = await this.api.get(`/kb/${domainId}`, { params });
+    return response.data;
+  }
+
+  async createKBEntry(domainId: string, data: any) {
+    const response = await this.api.post(`/kb/${domainId}/manual`, data);
+    return response.data;
+  }
+
+  async uploadKBFile(domainId: string, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await this.api.post(`/kb/${domainId}/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  }
+
+  async deleteKBEntry(domainId: string, entryId: string) {
+    const response = await this.api.delete(`/kb/${domainId}/entries/${entryId}`);
+    return response.data;
+  }
+
+  async crawlDomain(domainId: string) {
+    const response = await this.api.post(`/kb/${domainId}/crawl`);
+    return response.data;
+  }
+
+  // Token Usage endpoints
+  async getTokenUsage(params?: any) {
+    const response = await this.api.get('/tokens', { params });
+    return response.data;
+  }
+
+  async getTokenStats(params?: any) {
+    const response = await this.api.get('/tokens/stats', { params });
+    return response.data;
+  }
+
+  async createTokenLog(data: any) {
+    const response = await this.api.post('/tokens', data);
+    return response.data;
+  }
+
+  // Reports endpoints
+  async downloadCSVReport(params?: any) {
+    const response = await this.api.get('/reports/csv', {
+      params,
+      responseType: 'blob',
+    });
+    return response.data;
+  }
+
+  async downloadPDFReport(params?: any) {
+    const response = await this.api.get('/reports/pdf', {
+      params,
+      responseType: 'blob',
+    });
+    return response.data;
+  }
+
+  async generateInvoice(data: any) {
+    const response = await this.api.post('/reports/invoice', data);
+    return response.data;
+  }
+}
+
+export const apiService = new ApiService();
