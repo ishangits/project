@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const adminSchema = new mongoose.Schema({
   email: {
@@ -21,17 +21,17 @@ const adminSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    default: 'admin',
-    enum: ['admin', 'super_admin']
+    default: 'admin'
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  isActive: {
+    type: Boolean,
+    default: true
   },
   lastLogin: {
-    type: Date,
-    default: null
+    type: Date
   }
+}, {
+  timestamps: true
 });
 
 // Hash password before saving
@@ -48,8 +48,8 @@ adminSchema.pre('save', async function(next) {
 });
 
 // Compare password method
-adminSchema.methods.comparePassword = async function(password) {
-  return await bcrypt.compare(password, this.password);
+adminSchema.methods.comparePassword = async function(candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
-export default mongoose.model('Admin', adminSchema);
+module.exports = mongoose.model('Admin', adminSchema);

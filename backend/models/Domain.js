@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const domainSchema = new mongoose.Schema({
   name: {
@@ -6,15 +6,12 @@ const domainSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  url: {
+  domain: {
     type: String,
     required: true,
+    unique: true,
+    lowercase: true,
     trim: true
-  },
-  domainId: {
-    type: String,
-    required: true,
-    unique: true
   },
   apiEndpoint: {
     type: String,
@@ -22,50 +19,51 @@ const domainSchema = new mongoose.Schema({
   },
   authToken: {
     type: String,
-    required: true
+    required: true,
+    unique: true
   },
-  kbSettings: {
-    autoUpdate: {
-      type: Boolean,
-      default: false
-    },
-    lastUpdated: {
-      type: Date,
-      default: null
-    },
-    crawlEnabled: {
-      type: Boolean,
-      default: false
-    },
-    updateInterval: {
-      type: Number,
-      default: 24 // hours
-    }
+  domainId: {
+    type: String,
+    required: true,
+    unique: true
   },
   status: {
     type: String,
     enum: ['active', 'inactive', 'suspended'],
     default: 'active'
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  description: {
+    type: String,
+    trim: true
   },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+  contactEmail: {
+    type: String,
+    lowercase: true,
+    trim: true
+  },
+  plan: {
+    type: String,
+    enum: ['basic', 'premium', 'enterprise'],
+    default: 'basic'
+  },
+  tokenLimit: {
+    type: Number,
+    default: 10000
+  },
+  tokensUsed: {
+    type: Number,
+    default: 0
   }
+}, {
+  timestamps: true
 });
 
-// Generate domain ID and auth token before saving
+// Generate unique domain ID
 domainSchema.pre('save', function(next) {
-  if (this.isNew) {
-    this.domainId = 'dom_' + Math.random().toString(36).substring(2, 15);
-    this.authToken = 'tok_' + Math.random().toString(36).substring(2, 25) + Math.random().toString(36).substring(2, 25);
-    this.apiEndpoint = `https://api.server.com/chatbot/${this.domainId}`;
+  if (!this.domainId) {
+    this.domainId = 'DOM-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
   }
-  this.updatedAt = new Date();
   next();
 });
 
-export default mongoose.model('Domain', domainSchema);
+module.exports = mongoose.model('Domain', domainSchema);

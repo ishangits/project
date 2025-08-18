@@ -1,62 +1,58 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const knowledgeBaseEntrySchema = new mongoose.Schema({
   domainId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Domain',
-    required: true
-  },
-  type: {
     type: String,
-    enum: ['faq', 'manual', 'crawled', 'upload'],
-    required: true
+    required: true,
+    index: true
   },
   question: {
     type: String,
+    required: true,
     trim: true
   },
   answer: {
     type: String,
+    required: true,
     trim: true
   },
-  content: {
+  category: {
     type: String,
-    trim: true
-  },
-  source: {
-    type: String,
-    trim: true
-  },
-  metadata: {
-    filename: String,
-    fileSize: Number,
-    uploadDate: Date,
-    crawlDate: Date,
-    url: String
-  },
-  status: {
-    type: String,
-    enum: ['active', 'inactive', 'pending'],
-    default: 'active'
+    trim: true,
+    default: 'General'
   },
   tags: [{
     type: String,
     trim: true
   }],
-  createdAt: {
-    type: Date,
-    default: Date.now
+  source: {
+    type: String,
+    enum: ['manual', 'upload', 'crawl'],
+    default: 'manual'
   },
-  updatedAt: {
+  sourceFile: {
+    type: String,
+    trim: true
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  priority: {
+    type: Number,
+    default: 1,
+    min: 1,
+    max: 10
+  },
+  lastUpdated: {
     type: Date,
     default: Date.now
   }
+}, {
+  timestamps: true
 });
 
-// Update timestamp on save
-knowledgeBaseEntrySchema.pre('save', function(next) {
-  this.updatedAt = new Date();
-  next();
-});
+// Index for better search performance
+knowledgeBaseEntrySchema.index({ domainId: 1, question: 'text', answer: 'text' });
 
-export default mongoose.model('KnowledgeBaseEntry', knowledgeBaseEntrySchema);
+module.exports = mongoose.model('KnowledgeBaseEntry', knowledgeBaseEntrySchema);
