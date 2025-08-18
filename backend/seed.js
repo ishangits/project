@@ -4,6 +4,7 @@ import Admin from './models/Admin.js';
 import Domain from './models/Domain.js';
 import KnowledgeBaseEntry from './models/KnowledgeBaseEntry.js';
 import TokenUsageLog from './models/TokenUsageLog.js';
+import Invoice from './models/Invoice.js';
 import { connectDB } from './config/database.js';
 import crypto from 'crypto';
 
@@ -19,6 +20,7 @@ const seedData = async () => {
     await Domain.deleteMany({});
     await KnowledgeBaseEntry.deleteMany({});
     await TokenUsageLog.deleteMany({});
+    await Invoice.deleteMany({});
 
     console.log('Cleared existing data');
 
@@ -120,6 +122,77 @@ tokenLogs.push({
 
     await TokenUsageLog.insertMany(tokenLogs);
     console.log('Created sample token usage logs');
+
+    // Create sample invoices
+    const invoices = [
+      {
+        domainId: domain1._id,
+        amount: 150.00,
+        currency: 'USD',
+        status: 'paid',
+        description: 'Monthly token usage - March 2024',
+        issueDate: new Date('2024-03-01'),
+        dueDate: new Date('2024-03-31'),
+        metadata: {
+          tokenUsage: 75000,
+          billingPeriod: {
+            start: new Date('2024-03-01'),
+            end: new Date('2024-03-31')
+          }
+        }
+      },
+      {
+        domainId: domain1._id,
+        amount: 200.50,
+        currency: 'USD',
+        status: 'pending',
+        description: 'Monthly token usage - April 2024',
+        issueDate: new Date('2024-04-01'),
+        dueDate: new Date('2024-04-30'),
+        metadata: {
+          tokenUsage: 100250,
+          billingPeriod: {
+            start: new Date('2024-04-01'),
+            end: new Date('2024-04-30')
+          }
+        }
+      },
+      {
+        domainId: domain2._id,
+        amount: 89.99,
+        currency: 'USD',
+        status: 'paid',
+        description: 'Monthly token usage - March 2024',
+        issueDate: new Date('2024-03-01'),
+        dueDate: new Date('2024-03-31'),
+        metadata: {
+          tokenUsage: 44995,
+          billingPeriod: {
+            start: new Date('2024-03-01'),
+            end: new Date('2024-03-31')
+          }
+        }
+      },
+      {
+        domainId: domain2._id,
+        amount: 125.75,
+        currency: 'USD',
+        status: 'failed',
+        description: 'Monthly token usage - April 2024',
+        issueDate: new Date('2024-04-01'),
+        dueDate: new Date('2024-04-30'),
+        metadata: {
+          tokenUsage: 62875,
+          billingPeriod: {
+            start: new Date('2024-04-01'),
+            end: new Date('2024-04-30')
+          }
+        }
+      }
+    ];
+
+    await Invoice.insertMany(invoices);
+    console.log('Created sample invoices');
 
     console.log('Seed data created successfully!');
     console.log(`Admin credentials: ${admin.email} / ${process.env.ADMIN_PASSWORD || 'admin123'}`);

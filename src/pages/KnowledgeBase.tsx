@@ -376,20 +376,22 @@ const KnowledgeBase: React.FC = () => {
                     Page {currentPage} of {totalPages}
                   </div>
                   <div className="flex space-x-2">
-                    <button
-                      onClick={() => setCurrentPage(currentPage - 1)}
-                      disabled={currentPage === 1}
-                      className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
-                    >
-                      Previous
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                      className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
-                    >
-                      Next
-                    </button>
+                  <button
+  onClick={() => setCurrentPage(currentPage - 1)}
+  disabled={Number(currentPage) === 1}
+  className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
+>
+  Previous
+</button>
+
+<button
+  onClick={() => setCurrentPage(Number(currentPage) + 1)}
+  disabled={Number(currentPage) === Number(totalPages)}
+  className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
+>
+  Next
+</button>
+
                   </div>
                 </div>
               </div>

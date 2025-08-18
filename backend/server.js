@@ -9,6 +9,7 @@ import domainRoutes from './routes/domains.js';
 import kbRoutes from './routes/kb.js';
 import tokenRoutes from './routes/tokens.js';
 import reportRoutes from './routes/reports.js';
+import invoiceRoutes from './routes/invoices.js';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use('/api/domains', domainRoutes);
 app.use('/api/kb', kbRoutes);
 app.use('/api/tokens', tokenRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api', invoiceRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

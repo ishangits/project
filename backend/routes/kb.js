@@ -6,6 +6,9 @@ import fs from 'fs';
 import KnowledgeBaseEntry from '../models/KnowledgeBaseEntry.js';
 import Domain from '../models/Domain.js';
 import { authenticateToken } from '../middleware/auth.js';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
+
 
 const router = express.Router();
 
@@ -216,21 +219,67 @@ router.delete('/:domainId/entries/:entryId', authenticateToken, async (req, res)
 });
 
 // Crawl domain (placeholder)
+
+
 router.post('/:domainId/crawl', authenticateToken, async (req, res) => {
   try {
-    // This is a placeholder for domain crawling functionality
-    // In a real implementation, this would crawl the domain and extract content
-    
-    // Update domain's KB timestamp
-    await Domain.findByIdAndUpdate(req.params.domainId, {
+    const { domainId } = req.params;
+
+    // 1. Fetch domain URL from DB
+    const domain = await Domain.findById(domainId);
+    if (!domain) {
+      return res.status(404).json({ message: 'Domain not found' });
+    }
+
+    const url = domain.url;
+    if (!url) {
+      return res.status(400).json({ message: 'Domain URL is empty' });
+    }
+
+    // 2. Fetch page content
+    const response = await axios.get(url);
+    const html = response.data;
+
+    // 3. Parse HTML with cheerio
+    const $ = cheerio.load(html);
+    const entries = [];
+
+    // Extract headings and paragraphs
+    $('h1,h2,h3,p').each((i, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 20) { // skip very short content
+        entries.push({
+          domainId,
+          type: 'crawled',
+          content: text,
+          metadata: {
+            url,
+            crawlDate: new Date()
+          }
+        });
+      }
+    });
+
+    // 4. Save to KnowledgeBaseEntry
+    if (entries.length > 0) {
+      await KnowledgeBaseEntry.insertMany(entries);
+    }
+
+    // 5. Update domain's KB timestamp
+    await Domain.findByIdAndUpdate(domainId, {
       'kbSettings.lastUpdated': new Date()
     });
 
-    res.json({ message: 'Domain crawl initiated successfully (placeholder)' });
+    res.json({
+      message: `Domain crawl completed successfully. ${entries.length} entries added.`,
+      count: entries.length
+    });
+
   } catch (error) {
     console.error('Crawl domain error:', error);
-    res.status(500).json({ message: 'Error crawling domain' });
+    res.status(500).json({ message: 'Error crawling domain', error: error.message });
   }
 });
+
 
 export default router;

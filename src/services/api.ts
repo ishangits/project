@@ -149,6 +149,37 @@ class ApiService {
     const response = await this.api.post('/reports/invoice', data);
     return response.data;
   }
+
+  // Invoice endpoints
+  async getClientInvoices(domainId: string, params?: any) {
+    const response = await this.api.get(`/clients/${domainId}/invoices`, { params });
+    return response.data;
+  }
+
+  async createInvoice(domainId: string, data: any) {
+    const response = await this.api.post(`/clients/${domainId}/invoices`, data);
+    return response.data;
+  }
+
+  async updateInvoiceStatus(invoiceId: string, data: any) {
+    const response = await this.api.put(`/invoices/${invoiceId}`, data);
+    return response.data;
+  }
+
+  async getInvoice(invoiceId: string) {
+    const response = await this.api.get(`/invoices/${invoiceId}`);
+    return response.data;
+  }
+
+  async deleteInvoice(invoiceId: string) {
+    const response = await this.api.delete(`/invoices/${invoiceId}`);
+    return response.data;
+  }
+
+  async getInvoiceStats(params?: any) {
+    const response = await this.api.get('/invoices/stats/summary', { params });
+    return response.data;
+  }
 }
 
 export const apiService = new ApiService();

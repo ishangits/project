@@ -37,7 +37,7 @@ const Login: React.FC = () => {
             <Settings className="h-8 w-8 text-white" />
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            AI Chatbot Admin Panel
+            Real Estate Admin Panel
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             Sign in to manage your chatbot domains

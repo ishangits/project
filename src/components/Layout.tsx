@@ -47,7 +47,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div className="flex items-center justify-between h-16 px-6 bg-blue-600">
       <div className="flex items-center">
         <Settings className="h-8 w-8 text-white" />
-        <span className="ml-2 text-xl font-bold text-white">AI Chatbot Admin</span>
+        <span className="ml-2 text-xl font-medium text-white">Real Estate Admin</span>
       </div>
       <button
         className="lg:hidden text-white"
