@@ -14,7 +14,8 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const admin = await Admin.findOne({ email: email.toLowerCase() });
+    const admin = await Admin.findOne({ where: { email: email.toLowerCase() } });
+
     if (!admin) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -25,11 +26,10 @@ router.post('/login', async (req, res) => {
     }
 
     // Update last login
-    admin.lastLogin = new Date();
-    await admin.save();
+    await admin.update({ lastLogin: new Date() });
 
     const token = jwt.sign(
-      { adminId: admin._id, email: admin.email },
+      { adminId: admin.id, email: admin.email },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -37,7 +37,7 @@ router.post('/login', async (req, res) => {
     res.json({
       token,
       admin: {
-        id: admin._id,
+        id: admin.id,
         email: admin.email,
         name: admin.name,
         role: admin.role,
@@ -54,7 +54,7 @@ router.post('/login', async (req, res) => {
 router.get('/verify', authenticateToken, (req, res) => {
   res.json({
     admin: {
-      id: req.admin._id,
+      id: req.admin.id,
       email: req.admin.email,
       name: req.admin.name,
       role: req.admin.role,
@@ -63,7 +63,7 @@ router.get('/verify', authenticateToken, (req, res) => {
   });
 });
 
-// Logout (client-side token removal, but we can log it)
+// Logout (client-side token removal, optionally log it)
 router.post('/logout', authenticateToken, (req, res) => {
   res.json({ message: 'Logged out successfully' });
 });

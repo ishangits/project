@@ -1,64 +1,52 @@
-import mongoose from 'mongoose';
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/database.js';
+import Domain from './Domain.js';
 
-const knowledgeBaseEntrySchema = new mongoose.Schema({
-domainId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Domain',
-    required: true
-  },
-  type: {
-type: String,
-    enum: ['faq', 'manual', 'crawled', 'upload'],
-    required: true
-},
-question: {
-type: String,
-trim: true
-},
-answer: {
-type: String,
-trim: true
-},
-  suburb: String,    // <--- add this
-  postcode: String,  // <--- add this
-  content: {
-type: String,
-    trim: true
-},
-  source: {
-type: String,
-trim: true
-  },
-  metadata: {
-    filename: String,
-    fileSize: Number,
-    uploadDate: Date,
-    crawlDate: Date,
-    url: String
-  },
-  status: {
-type: String,
-    enum: ['active', 'inactive', 'pending'],
-    default: 'active'
-},
-  tags: [{
-type: String,
-trim: true
-  }],
-  createdAt: {
-    type: Date,
-    default: Date.now
-},
-  updatedAt: {
-type: Date,
-default: Date.now
-}
-});
+class KnowledgeBaseEntry extends Model {}
 
-// Update timestamp on save
-knowledgeBaseEntrySchema.pre('save', function(next) {
-  this.updatedAt = new Date();
-  next();
-});
+KnowledgeBaseEntry.init(
+  {
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    domainId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: Domain,
+        key: 'id',
+      },
+      onDelete: 'CASCADE',
+    },
+    type: { 
+      type: DataTypes.ENUM('faq', 'manual', 'crawled', 'upload'),
+      allowNull: false
+    },
+    question: { type: DataTypes.TEXT },
+    answer: { type: DataTypes.TEXT },
+    content: { type: DataTypes.TEXT },
+    source: { type: DataTypes.STRING },
+    metadata: { type: DataTypes.JSON, defaultValue: {} },
+    status: { 
+      type: DataTypes.ENUM('active', 'inactive', 'pending'), 
+      defaultValue: 'active' 
+    },
+    tags: { type: DataTypes.JSON, defaultValue: [] },
+    createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  },
+  {
+    sequelize,
+    modelName: 'KnowledgeBaseEntry',
+    tableName: 'knowledge_base_entries',
+    timestamps: true,
+    hooks: {
+      beforeUpdate: (entry) => {
+        entry.updatedAt = new Date();
+      },
+    },
+  }
+);
 
-export default mongoose.model('KnowledgeBaseEntry', knowledgeBaseEntrySchema);
+// Define association
+KnowledgeBaseEntry.belongsTo(Domain, { foreignKey: 'domainId', as: 'domain' });
+
+export default KnowledgeBaseEntry;

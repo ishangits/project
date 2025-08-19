@@ -1,4 +1,5 @@
 import express from 'express';
+import { Op, fn, col } from 'sequelize';
 import Invoice from '../models/Invoice.js';
 import Domain from '../models/Domain.js';
 import TokenUsageLog from '../models/TokenUsageLog.js';
@@ -10,35 +11,28 @@ const router = express.Router();
 router.get('/clients/:domainId/invoices', authenticateToken, async (req, res) => {
   try {
     const { domainId } = req.params;
-    const { page = 1, limit = 10, status = '', sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+    const { page = 1, limit = 10, status = '', sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
+    const offset = (page - 1) * limit;
 
-    // Verify domain exists
-    const domain = await Domain.findById(domainId);
-    if (!domain) {
-      return res.status(404).json({ message: 'Domain not found' });
-    }
+    const domain = await Domain.findByPk(domainId);
+    if (!domain) return res.status(404).json({ message: 'Domain not found' });
 
-    const query = { domainId };
-    if (status) {
-      query.status = status;
-    }
+    const where = { domainId };
+    if (status) where.status = status;
 
-    const sortObj = {};
-    sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
-
-    const invoices = await Invoice.find(query)
-      .populate('domainId', 'name url domainId')
-      .sort(sortObj)
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
-    const total = await Invoice.countDocuments(query);
+    const { rows: invoices, count: total } = await Invoice.findAndCountAll({
+      where,
+      include: [{ model: Domain, attributes: ['id', 'name', 'url', 'domainId'] }],
+      order: [[sortBy, sortOrder.toUpperCase()]],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
 
     res.json({
       invoices,
       totalPages: Math.ceil(total / limit),
       currentPage: parseInt(page),
-      total
+      total,
     });
   } catch (error) {
     console.error('Get client invoices error:', error);
@@ -46,65 +40,43 @@ router.get('/clients/:domainId/invoices', authenticateToken, async (req, res) =>
   }
 });
 
-// Create new invoice for a client
+// Create new invoice
 router.post('/clients/:domainId/invoices', authenticateToken, async (req, res) => {
   try {
     const { domainId } = req.params;
     const { amount, currency = 'USD', description, dueDate, metadata } = req.body;
 
-    // Verify domain exists
-    const domain = await Domain.findById(domainId);
-    if (!domain) {
-      return res.status(404).json({ message: 'Domain not found' });
-    }
+    const domain = await Domain.findByPk(domainId);
+    if (!domain) return res.status(404).json({ message: 'Domain not found' });
 
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ message: 'Valid amount is required' });
-    }
+    if (!amount || amount <= 0) return res.status(400).json({ message: 'Valid amount is required' });
 
-    // Calculate token usage for this domain if not provided
     let tokenUsage = 0;
     if (metadata?.billingPeriod) {
-      const usage = await TokenUsageLog.aggregate([
-        {
-          $match: {
-            domainId: domain._id,
-            date: {
-              $gte: new Date(metadata.billingPeriod.start),
-              $lte: new Date(metadata.billingPeriod.end)
-            }
-          }
+      tokenUsage = await TokenUsageLog.sum('tokensUsed', {
+        where: {
+          domainId,
+          date: {
+            [Op.between]: [new Date(metadata.billingPeriod.start), new Date(metadata.billingPeriod.end)],
+          },
         },
-        {
-          $group: {
-            _id: null,
-            totalTokens: { $sum: '$tokensUsed' },
-            totalCost: { $sum: '$cost' }
-          }
-        }
-      ]);
-      
-      if (usage.length > 0) {
-        tokenUsage = usage[0].totalTokens;
-      }
+      }) || 0;
     }
 
-    const invoice = new Invoice({
+    const invoice = await Invoice.create({
       domainId,
       amount,
       currency,
       description: description || `Invoice for ${domain.name}`,
       dueDate: dueDate ? new Date(dueDate) : undefined,
-      metadata: {
-        ...metadata,
-        tokenUsage
-      }
+      metadata: { ...metadata, tokenUsage },
     });
 
-    await invoice.save();
-    await invoice.populate('domainId', 'name url domainId');
+    const invoiceWithDomain = await Invoice.findByPk(invoice.id, {
+      include: [{ model: Domain, attributes: ['id', 'name', 'url', 'domainId'] }],
+    });
 
-    res.status(201).json(invoice);
+    res.status(201).json(invoiceWithDomain);
   } catch (error) {
     console.error('Create invoice error:', error);
     res.status(500).json({ message: 'Error creating invoice' });
@@ -117,26 +89,22 @@ router.put('/invoices/:invoiceId', authenticateToken, async (req, res) => {
     const { invoiceId } = req.params;
     const { status, metadata } = req.body;
 
-    if (!status || !['pending', 'paid', 'failed', 'cancelled'].includes(status)) {
+    if (!status || !['pending', 'paid', 'failed', 'cancelled'].includes(status))
       return res.status(400).json({ message: 'Valid status is required' });
-    }
 
-    const updateData = { status };
-    if (metadata) {
-      updateData.metadata = metadata;
-    }
+    const invoice = await Invoice.findByPk(invoiceId);
+    if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
 
-    const invoice = await Invoice.findByIdAndUpdate(
-      invoiceId,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('domainId', 'name url domainId');
+    await invoice.update({
+      status,
+      ...(metadata && { metadata }),
+    });
 
-    if (!invoice) {
-      return res.status(404).json({ message: 'Invoice not found' });
-    }
+    const updatedInvoice = await Invoice.findByPk(invoice.id, {
+      include: [{ model: Domain, attributes: ['id', 'name', 'url', 'domainId'] }],
+    });
 
-    res.json(invoice);
+    res.json(updatedInvoice);
   } catch (error) {
     console.error('Update invoice error:', error);
     res.status(500).json({ message: 'Error updating invoice' });
@@ -146,13 +114,10 @@ router.put('/invoices/:invoiceId', authenticateToken, async (req, res) => {
 // Get single invoice
 router.get('/invoices/:invoiceId', authenticateToken, async (req, res) => {
   try {
-    const invoice = await Invoice.findById(req.params.invoiceId)
-      .populate('domainId', 'name url domainId');
-    
-    if (!invoice) {
-      return res.status(404).json({ message: 'Invoice not found' });
-    }
-
+    const invoice = await Invoice.findByPk(req.params.invoiceId, {
+      include: [{ model: Domain, attributes: ['id', 'name', 'url', 'domainId'] }],
+    });
+    if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
     res.json(invoice);
   } catch (error) {
     console.error('Get invoice error:', error);
@@ -163,12 +128,10 @@ router.get('/invoices/:invoiceId', authenticateToken, async (req, res) => {
 // Delete invoice
 router.delete('/invoices/:invoiceId', authenticateToken, async (req, res) => {
   try {
-    const invoice = await Invoice.findByIdAndDelete(req.params.invoiceId);
-    
-    if (!invoice) {
-      return res.status(404).json({ message: 'Invoice not found' });
-    }
+    const invoice = await Invoice.findByPk(req.params.invoiceId);
+    if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
 
+    await invoice.destroy();
     res.json({ message: 'Invoice deleted successfully' });
   } catch (error) {
     console.error('Delete invoice error:', error);
@@ -180,22 +143,16 @@ router.delete('/invoices/:invoiceId', authenticateToken, async (req, res) => {
 router.get('/invoices/stats/summary', authenticateToken, async (req, res) => {
   try {
     const { domainId } = req.query;
-    
-    const matchQuery = {};
-    if (domainId) {
-      matchQuery.domainId = domainId;
-    }
 
-    const stats = await Invoice.aggregate([
-      { $match: matchQuery },
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 },
-          totalAmount: { $sum: '$amount' }
-        }
-      }
-    ]);
+    const where = {};
+    if (domainId) where.domainId = domainId;
+
+    const stats = await Invoice.findAll({
+      where,
+      attributes: ['status', [fn('COUNT', col('id')), 'count'], [fn('SUM', col('amount')), 'totalAmount']],
+      group: ['status'],
+      raw: true,
+    });
 
     const summary = {
       total: 0,
@@ -203,16 +160,13 @@ router.get('/invoices/stats/summary', authenticateToken, async (req, res) => {
       paid: { count: 0, amount: 0 },
       pending: { count: 0, amount: 0 },
       failed: { count: 0, amount: 0 },
-      cancelled: { count: 0, amount: 0 }
+      cancelled: { count: 0, amount: 0 },
     };
 
     stats.forEach(stat => {
-      summary.total += stat.count;
-      summary.totalAmount += stat.totalAmount;
-      summary[stat._id] = {
-        count: stat.count,
-        amount: stat.totalAmount
-      };
+      summary.total += parseInt(stat.count);
+      summary.totalAmount += parseFloat(stat.totalAmount);
+      summary[stat.status] = { count: parseInt(stat.count), amount: parseFloat(stat.totalAmount) };
     });
 
     res.json(summary);

@@ -1,51 +1,54 @@
-import mongoose from 'mongoose';
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/database.js';
+import Domain from './Domain.js';
 
-const tokenUsageLogSchema = new mongoose.Schema({
-domainId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Domain',
-    required: true
+class TokenUsageLog extends Model {}
+
+TokenUsageLog.init(
+  {
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    domainId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: Domain,
+        key: 'id',
+      },
+      onDelete: 'CASCADE',
+    },
+    date: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+    tokensUsed: { type: DataTypes.INTEGER, allowNull: false, validate: { min: 0 } },
+    requestType: { 
+      type: DataTypes.ENUM('chat', 'kb_update', 'crawl', 'training'),
+      defaultValue: 'chat'
+    },
+    cost: { type: DataTypes.DECIMAL(12, 6), allowNull: false, defaultValue: 0 },
+    metadata: { 
+      type: DataTypes.JSON, 
+      defaultValue: { 
+        userQuery: null,
+        responseLength: null,
+        sessionId: null,
+        model: 'gpt-3.5-turbo'
+      } 
+    },
+    createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   },
-  date: {
-    type: Date,
-required: true,
-    default: Date.now
-},
-tokensUsed: {
-type: Number,
-required: true,
-min: 0
-},
-requestType: {
-type: String,
-    enum: ['chat', 'kb_update', 'crawl', 'training'],
-default: 'chat'
-},
-  cost: {
-type: Number,
-    required: true,
-min: 0
-},
-metadata: {
-    userQuery: String,
-    responseLength: Number,
-    sessionId: String,
-    model: {
-      type: String,
-      default: 'gpt-3.5-turbo'
-    }
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-}
-});
+  {
+    sequelize,
+    modelName: 'TokenUsageLog',
+    tableName: 'token_usage_logs',
+    timestamps: true,
+    hooks: {
+      beforeCreate: (log) => {
+        const costPer1K = parseFloat(process.env.TOKEN_COST_PER_1K) || 0.002;
+        log.cost = (log.tokensUsed / 1000) * costPer1K;
+      },
+    },
+  }
+);
 
-// Calculate cost before saving
-tokenUsageLogSchema.pre('save', function(next) {
-  const costPer1K = parseFloat(process.env.TOKEN_COST_PER_1K) || 0.002;
-  this.cost = (this.tokensUsed / 1000) * costPer1K;
-  next();
-});
+// Define association
+TokenUsageLog.belongsTo(Domain, { foreignKey: 'domainId', as: 'domain' });
 
-export default mongoose.model('TokenUsageLog', tokenUsageLogSchema);
+export default TokenUsageLog;

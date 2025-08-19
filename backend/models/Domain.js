@@ -1,72 +1,47 @@
-import mongoose from 'mongoose';
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/database.js';
 
-const domainSchema = new mongoose.Schema({
-name: {
-type: String,
-required: true,
-trim: true
-},
-  url: {
-type: String,
-required: true,
-trim: true
-},
-  domainId: {
-    type: String,
-    required: true,
-    unique: true
+class Domain extends Model {}
+
+Domain.init(
+  {
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    name: { type: DataTypes.STRING, allowNull: false },
+    url: { type: DataTypes.STRING, allowNull: false },
+    domainId: { type: DataTypes.STRING, allowNull: false, unique: true },
+    apiEndpoint: { type: DataTypes.STRING, allowNull: false },
+    authToken: { type: DataTypes.STRING, allowNull: false },
+    kbSettings: { 
+      type: DataTypes.JSON,
+      defaultValue: {
+        autoUpdate: false,
+        lastUpdated: null,
+        crawlEnabled: false,
+        updateInterval: 24
+      }
+    },
+    status: { 
+      type: DataTypes.ENUM('active', 'inactive', 'suspended'),
+      defaultValue: 'active'
+    },
+    createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   },
-apiEndpoint: {
-type: String,
-required: true
-},
-authToken: {
-type: String,
-    required: true
-},
-  kbSettings: {
-    autoUpdate: {
-      type: Boolean,
-      default: false
+  {
+    sequelize,
+    modelName: 'Domain',
+    tableName: 'domains',
+    timestamps: true, // automatically handles createdAt & updatedAt
+    hooks: {
+      beforeCreate: (domain) => {
+        domain.domainId = 'dom_' + Math.random().toString(36).substring(2, 15);
+        domain.authToken = 'tok_' + Math.random().toString(36).substring(2, 25) + Math.random().toString(36).substring(2, 25);
+        domain.apiEndpoint = `https://api.server.com/chatbot/${domain.domainId}`;
+      },
+      beforeUpdate: (domain) => {
+        domain.updatedAt = new Date();
+      },
     },
-    lastUpdated: {
-      type: Date,
-      default: null
-    },
-    crawlEnabled: {
-      type: Boolean,
-      default: false
-    },
-    updateInterval: {
-      type: Number,
-      default: 24 // hours
-    }
-},
-openAIKey: { type: String, required: false }, // 🔑 New field
-status: {
-type: String,
-enum: ['active', 'inactive', 'suspended'],
-default: 'active'
-},
-  createdAt: {
-    type: Date,
-    default: Date.now
-},
-  updatedAt: {
-    type: Date,
-    default: Date.now
-}
-});
-
-// Generate domain ID and auth token before saving
-domainSchema.pre('save', function(next) {
-  if (this.isNew) {
-    this.domainId = 'dom_' + Math.random().toString(36).substring(2, 15);
-    this.authToken = 'tok_' + Math.random().toString(36).substring(2, 25) + Math.random().toString(36).substring(2, 25);
-    this.apiEndpoint = `https://api.server.com/chatbot/${this.domainId}`;
-}
-  this.updatedAt = new Date();
-next();
-});
-
-export default mongoose.model('Domain', domainSchema);
+  }
+);
+export default Domain;

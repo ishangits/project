@@ -213,7 +213,7 @@ const KnowledgeBase: React.FC = () => {
             >
               <option value="">Select a domain...</option>
               {domains.map((domain) => (
-                <option key={domain._id} value={domain._id}>
+                <option key={domain._id || domain.name} value={domain._id}>
                   {domain.name} ({domain.url})
                 </option>
               ))}

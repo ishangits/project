@@ -1,4 +1,5 @@
 import express from 'express';
+import { Op, fn, col, literal } from 'sequelize';
 import TokenUsageLog from '../models/TokenUsageLog.js';
 import Domain from '../models/Domain.js';
 import { authenticateToken } from '../middleware/auth.js';
@@ -8,43 +9,31 @@ const router = express.Router();
 // Get token usage with filters
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 10, 
-      domainId = '', 
-      startDate = '', 
-      endDate = '', 
-      requestType = '' 
-    } = req.query;
+    const { page = 1, limit = 10, domainId = '', startDate = '', endDate = '', requestType = '' } = req.query;
 
-    const query = {};
-    
-    if (domainId) {
-      query.domainId = domainId;
-    }
-    
+    const where = {};
+    if (domainId) where.domainId = domainId;
     if (startDate || endDate) {
-      query.date = {};
-      if (startDate) query.date.$gte = new Date(startDate);
-      if (endDate) query.date.$lte = new Date(endDate);
+      where.date = {};
+      if (startDate) where.date[Op.gte] = new Date(startDate);
+      if (endDate) where.date[Op.lte] = new Date(endDate);
     }
-    
-    if (requestType) {
-      query.requestType = requestType;
-    }
+    if (requestType) where.requestType = requestType;
 
-    const logs = await TokenUsageLog.find(query)
-      .populate('domainId', 'name url domainId')
-      .sort({ date: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+   const logs = await TokenUsageLog.findAll({
+  where,
+  include: [{ model: Domain, as: 'domain', attributes: ['name', 'domainId', 'url'] }],
+  order: [['date', 'DESC']],
+  limit: parseInt(limit),
+  offset: (page - 1) * limit
+});
 
-    const total = await TokenUsageLog.countDocuments(query);
+    const total = await TokenUsageLog.count({ where });
 
     res.json({
       logs,
       totalPages: Math.ceil(total / limit),
-      currentPage: page,
+      currentPage: parseInt(page),
       total
     });
   } catch (error) {
@@ -54,80 +43,56 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Get token usage statistics
+// Get token usage statistics
 router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const { domainId = '', days = 30 } = req.query;
-    
+
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(days));
-    
-    const matchQuery = {
-      date: { $gte: startDate }
-    };
-    
-    if (domainId) {
-      matchQuery.domainId = domainId;
-    }
+
+    const where = { date: { [Op.gte]: startDate } };
+    if (domainId) where.domainId = domainId;
 
     // Total usage
-    const totalStats = await TokenUsageLog.aggregate([
-      { $match: matchQuery },
-      {
-        $group: {
-          _id: null,
-          totalTokens: { $sum: '$tokensUsed' },
-          totalCost: { $sum: '$cost' },
-          totalRequests: { $sum: 1 }
-        }
-      }
-    ]);
+    const totalStats = await TokenUsageLog.findOne({
+      attributes: [
+        [fn('SUM', col('TokenUsageLog.tokensUsed')), 'totalTokens'],
+        [fn('SUM', col('TokenUsageLog.cost')), 'totalCost'],
+        [fn('COUNT', col('TokenUsageLog.id')), 'totalRequests'] // fully qualified
+      ],
+      where
+    });
 
     // Daily usage for chart
-    const dailyUsage = await TokenUsageLog.aggregate([
-      { $match: matchQuery },
-      {
-        $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
-          tokens: { $sum: '$tokensUsed' },
-          cost: { $sum: '$cost' },
-          requests: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
+    const dailyUsage = await TokenUsageLog.findAll({
+      attributes: [
+        [fn('DATE', col('TokenUsageLog.date')), 'day'],
+        [fn('SUM', col('TokenUsageLog.tokensUsed')), 'tokens'],
+        [fn('SUM', col('TokenUsageLog.cost')), 'cost'],
+        [fn('COUNT', col('TokenUsageLog.id')), 'requests'] // fully qualified
+      ],
+      where,
+      group: [literal('DATE(`TokenUsageLog`.`date`)')],
+      order: [[literal('DATE(`TokenUsageLog`.`date`)'), 'ASC']]
+    });
 
     // Usage by domain
-    const usageByDomain = await TokenUsageLog.aggregate([
-      { $match: matchQuery },
-      {
-        $group: {
-          _id: '$domainId',
-          tokens: { $sum: '$tokensUsed' },
-          cost: { $sum: '$cost' },
-          requests: { $sum: 1 }
-        }
-      },
-      {
-        $lookup: {
-          from: 'domains',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'domain'
-        }
-      },
-      {
-        $project: {
-          tokens: 1,
-          cost: 1,
-          requests: 1,
-          domainName: { $arrayElemAt: ['$domain.name', 0] }
-        }
-      },
-      { $sort: { tokens: -1 } }
-    ]);
+    const usageByDomain = await TokenUsageLog.findAll({
+      attributes: [
+        'domainId',
+        [fn('SUM', col('TokenUsageLog.tokensUsed')), 'tokens'],
+        [fn('SUM', col('TokenUsageLog.cost')), 'cost'],
+        [fn('COUNT', col('TokenUsageLog.id')), 'requests'] // fully qualified
+      ],
+      where,
+      include: [{ model: Domain, as: 'domain', attributes: ['name'] }],
+      group: ['TokenUsageLog.domainId', 'domain.id'],
+      order: [[fn('SUM', col('TokenUsageLog.tokensUsed')), 'DESC']]
+    });
 
     res.json({
-      total: totalStats[0] || { totalTokens: 0, totalCost: 0, totalRequests: 0 },
+      total: totalStats || { totalTokens: 0, totalCost: 0, totalRequests: 0 },
       dailyUsage,
       usageByDomain
     });
@@ -137,7 +102,8 @@ router.get('/stats', authenticateToken, async (req, res) => {
   }
 });
 
-// Create token usage log (for simulation/testing)
+
+// Create token usage log (simulation)
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const { domainId, tokensUsed, requestType = 'chat', metadata = {} } = req.body;
@@ -146,14 +112,13 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Domain ID and tokens used are required' });
     }
 
-    const log = new TokenUsageLog({
+    const log = await TokenUsageLog.create({
       domainId,
       tokensUsed,
       requestType,
       metadata
     });
 
-    await log.save();
     res.status(201).json(log);
   } catch (error) {
     console.error('Create token log error:', error);
