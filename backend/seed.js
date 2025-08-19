@@ -126,6 +126,8 @@ tokenLogs.push({
     // Create sample invoices
     const invoices = [
       {
+            invoiceId: crypto.randomUUID(), 
+
         domainId: domain1._id,
         amount: 150.00,
         currency: 'USD',
@@ -142,6 +144,8 @@ tokenLogs.push({
         }
       },
       {
+            invoiceId: crypto.randomUUID(), 
+
         domainId: domain1._id,
         amount: 200.50,
         currency: 'USD',
@@ -158,6 +162,8 @@ tokenLogs.push({
         }
       },
       {
+            invoiceId: crypto.randomUUID(), 
+
         domainId: domain2._id,
         amount: 89.99,
         currency: 'USD',
@@ -174,6 +180,8 @@ tokenLogs.push({
         }
       },
       {
+            invoiceId: crypto.randomUUID(), 
+
         domainId: domain2._id,
         amount: 125.75,
         currency: 'USD',

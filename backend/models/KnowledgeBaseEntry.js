@@ -1,58 +1,62 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const knowledgeBaseEntrySchema = new mongoose.Schema({
-  domainId: {
-    type: String,
-    required: true,
-    index: true
+domainId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Domain',
+    required: true
   },
-  question: {
-    type: String,
-    required: true,
+  type: {
+type: String,
+    enum: ['faq', 'manual', 'crawled', 'upload'],
+    required: true
+},
+question: {
+type: String,
+trim: true
+},
+answer: {
+type: String,
+trim: true
+},
+  content: {
+type: String,
     trim: true
-  },
-  answer: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  category: {
-    type: String,
-    trim: true,
-    default: 'General'
-  },
-  tags: [{
-    type: String,
-    trim: true
-  }],
+},
   source: {
-    type: String,
-    enum: ['manual', 'upload', 'crawl'],
-    default: 'manual'
+type: String,
+trim: true
   },
-  sourceFile: {
-    type: String,
-    trim: true
+  metadata: {
+    filename: String,
+    fileSize: Number,
+    uploadDate: Date,
+    crawlDate: Date,
+    url: String
   },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  priority: {
-    type: Number,
-    default: 1,
-    min: 1,
-    max: 10
-  },
-  lastUpdated: {
+  status: {
+type: String,
+    enum: ['active', 'inactive', 'pending'],
+    default: 'active'
+},
+  tags: [{
+type: String,
+trim: true
+  }],
+  createdAt: {
     type: Date,
     default: Date.now
-  }
-}, {
-  timestamps: true
+},
+  updatedAt: {
+type: Date,
+default: Date.now
+}
 });
 
-// Index for better search performance
-knowledgeBaseEntrySchema.index({ domainId: 1, question: 'text', answer: 'text' });
+// Update timestamp on save
+knowledgeBaseEntrySchema.pre('save', function(next) {
+  this.updatedAt = new Date();
+  next();
+});
 
-module.exports = mongoose.model('KnowledgeBaseEntry', knowledgeBaseEntrySchema);
+export default mongoose.model('KnowledgeBaseEntry', knowledgeBaseEntrySchema);
