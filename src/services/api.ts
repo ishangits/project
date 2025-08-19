@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
 class ApiService {
@@ -180,6 +181,7 @@ class ApiService {
     const response = await this.api.get('/invoices/stats/summary', { params });
     return response.data;
   }
+
 }
 
 export const apiService = new ApiService();

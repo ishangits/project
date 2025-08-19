@@ -19,6 +19,8 @@ answer: {
 type: String,
 trim: true
 },
+  suburb: String,    // <--- add this
+  postcode: String,  // <--- add this
   content: {
 type: String,
     trim: true

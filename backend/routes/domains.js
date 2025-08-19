@@ -11,7 +11,6 @@ const router = express.Router();
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '', sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
-    
     const query = search 
       ? { 
           $or: [
@@ -44,6 +43,7 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+
 // Get domain by ID
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
@@ -51,8 +51,9 @@ router.get('/:id', authenticateToken, async (req, res) => {
     if (!domain) {
       return res.status(404).json({ message: 'Domain not found' });
     }
+
     res.json(domain);
-  } catch (error) {
+    } catch (error) {
     console.error('Get domain error:', error);
     res.status(500).json({ message: 'Error fetching domain' });
   }
@@ -61,17 +62,18 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
 
 // Create new domain
+// Create new domain
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { name, url } = req.body;
+    const { name, url, openAIKey } = req.body; // ✅ get key from request body
 
     if (!name || !url) {
       return res.status(400).json({ message: 'Name and URL are required' });
     }
 
-    const domainId = crypto.randomUUID(); // Unique ID for the domain
-    const apiEndpoint = `/api/chat/${domainId}`; // API endpoint for this domain
-    const authToken = crypto.randomBytes(32).toString('hex'); // Secret auth token
+    const domainId = crypto.randomUUID(); 
+    const apiEndpoint = `/api/chat/${domainId}`;
+    const authToken = crypto.randomBytes(32).toString('hex');
 
     const domain = new Domain({
       name,
@@ -79,7 +81,8 @@ router.post('/', authenticateToken, async (req, res) => {
       domainId,
       apiEndpoint,
       authToken,
-      status: 'active' // default active
+      openAIKey, // ✅ save key in DB
+      status: 'active'
     });
 
     await domain.save();
@@ -92,12 +95,13 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 
+
 // Update domain
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
-    const { name, url, status, kbSettings } = req.body;
+    const { name, url, status, openAIKey, kbSettings } = req.body;
     
-    const updateData = { name, url, status };
+    const updateData = { name, url, status, openAIKey };
     if (kbSettings) {
       updateData.kbSettings = kbSettings;
     }

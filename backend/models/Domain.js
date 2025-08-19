@@ -42,6 +42,7 @@ type: String,
       default: 24 // hours
     }
 },
+openAIKey: { type: String, required: false }, // 🔑 New field
 status: {
 type: String,
 enum: ['active', 'inactive', 'suspended'],
