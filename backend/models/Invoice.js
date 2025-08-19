@@ -1,82 +1,65 @@
-import mongoose from 'mongoose';
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/database.js';
+import Domain from './Domain.js';
 
-const invoiceSchema = new mongoose.Schema({
-  invoiceId: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  domainId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Domain',
-    required: true
-  },
-  amount: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-  currency: {
-    type: String,
-    required: true,
-    default: 'USD',
-    enum: ['USD', 'EUR', 'GBP', 'CAD', 'AUD']
-  },
-  status: {
-    type: String,
-    required: true,
-    enum: ['pending', 'paid', 'failed', 'cancelled'],
-    default: 'pending'
-  },
-  issueDate: {
-    type: Date,
-    required: true,
-    default: Date.now
-  },
-  dueDate: {
-    type: Date,
-    required: true
-  },
-  description: {
-    type: String,
-    trim: true
-  },
-  metadata: {
-    tokenUsage: Number,
-    billingPeriod: {
-      start: Date,
-      end: Date
+class Invoice extends Model {}
+
+Invoice.init(
+  {
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    invoiceId: { type: DataTypes.STRING, allowNull: false, unique: true },
+    domainId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: Domain,
+        key: 'id',
+      },
+      onDelete: 'CASCADE',
     },
-    paymentMethod: String,
-    transactionId: String
+    amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, validate: { min: 0 } },
+    currency: { 
+      type: DataTypes.ENUM('USD', 'EUR', 'GBP', 'CAD', 'AUD'), 
+      defaultValue: 'USD', 
+      allowNull: false 
+    },
+    status: { 
+      type: DataTypes.ENUM('pending', 'paid', 'failed', 'cancelled'), 
+      defaultValue: 'pending',
+      allowNull: false
+    },
+    issueDate: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+    dueDate: { type: DataTypes.DATE, allowNull: false },
+    description: { type: DataTypes.TEXT },
+    metadata: { type: DataTypes.JSON, defaultValue: {} },
+    createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
-});
+  {
+    sequelize,
+    modelName: 'Invoice',
+    tableName: 'invoices',
+    timestamps: true,
+    hooks: {
+      beforeCreate: (invoice) => {
+        // Generate invoiceId
+        const timestamp = Date.now().toString().slice(-6);
+        const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+        invoice.invoiceId = `INV-${timestamp}-${random}`;
 
-// Generate invoice ID before saving
-invoiceSchema.pre('save', function(next) {
-  if (this.isNew) {
-    const timestamp = Date.now().toString().slice(-6);
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    this.invoiceId = `INV-${timestamp}-${random}`;
+        // Set dueDate if not provided
+        if (!invoice.dueDate) {
+          invoice.dueDate = new Date(invoice.issueDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+        }
+      },
+      beforeUpdate: (invoice) => {
+        invoice.updatedAt = new Date();
+      },
+    },
   }
-  this.updatedAt = new Date();
-  next();
-});
+);
 
-// Set due date to 30 days from issue date if not provided
-invoiceSchema.pre('save', function(next) {
-  if (this.isNew && !this.dueDate) {
-    this.dueDate = new Date(this.issueDate.getTime() + (30 * 24 * 60 * 60 * 1000));
-  }
-  next();
-});
+// Define association
+Invoice.belongsTo(Domain, { foreignKey: 'domainId', as: 'domain' });
 
-export default mongoose.model('Invoice', invoiceSchema);
+export default Invoice;

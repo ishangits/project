@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { connectDB } from './config/database.js';
+import { connectDB, sequelize } from './config/database.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -16,7 +16,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Connect to MongoDB
+// Connect to MySQL
 connectDB();
 
 // Middleware
@@ -43,6 +43,13 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// Sync Sequelize models & start server
+sequelize.sync({ alter: true }) // alter: true updates tables to match models
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Failed to sync database:', err);
+  });

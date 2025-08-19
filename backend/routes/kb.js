@@ -3,22 +3,20 @@ import multer from 'multer';
 import csv from 'csv-parser';
 import xlsx from 'xlsx';
 import fs from 'fs';
+import { Op } from 'sequelize';
 import KnowledgeBaseEntry from '../models/KnowledgeBaseEntry.js';
 import Domain from '../models/Domain.js';
 import { authenticateToken } from '../middleware/auth.js';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-
 const router = express.Router();
 
-// Configure multer for file uploads
+// Multer setup (same as before)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = 'uploads/';
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
@@ -26,50 +24,42 @@ const storage = multer.diskStorage({
     cb(null, file.fieldname + '-' + uniqueSuffix + '.' + file.originalname.split('.').pop());
   }
 });
-
 const upload = multer({ 
-  storage: storage,
+  storage,
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type. Only CSV and Excel files are allowed.'), false);
-    }
+    const allowed = ['text/csv','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+    cb(null, allowed.includes(file.mimetype));
   },
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// Get KB entries for a domain
+// Get KB entries with pagination/search
 router.get('/:domainId', authenticateToken, async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '', type = '' } = req.query;
-    
-    const query = { domainId: req.params.domainId };
-    
+    const offset = (page - 1) * limit;
+
+    const where = { domainId: req.params.domainId };
     if (search) {
-      query.$or = [
-        { question: { $regex: search, $options: 'i' } },
-        { answer: { $regex: search, $options: 'i' } },
-        { content: { $regex: search, $options: 'i' } }
+      where[Op.or] = [
+        { question: { [Op.like]: `%${search}%` } },
+        { answer: { [Op.like]: `%${search}%` } },
+        { content: { [Op.like]: `%${search}%` } }
       ];
     }
-    
-    if (type) {
-      query.type = type;
-    }
+    if (type) where.type = type;
 
-    const entries = await KnowledgeBaseEntry.find(query)
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
-    const total = await KnowledgeBaseEntry.countDocuments(query);
+    const { rows: entries, count: total } = await KnowledgeBaseEntry.findAndCountAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
 
     res.json({
       entries,
       totalPages: Math.ceil(total / limit),
-      currentPage: page,
+      currentPage: parseInt(page),
       total
     });
   } catch (error) {
@@ -82,25 +72,17 @@ router.get('/:domainId', authenticateToken, async (req, res) => {
 router.post('/:domainId/manual', authenticateToken, async (req, res) => {
   try {
     const { question, answer, tags } = req.body;
+    if (!question || !answer) return res.status(400).json({ message: 'Question and answer are required' });
 
-    if (!question || !answer) {
-      return res.status(400).json({ message: 'Question and answer are required' });
-    }
-
-    const entry = new KnowledgeBaseEntry({
+    const entry = await KnowledgeBaseEntry.create({
       domainId: req.params.domainId,
       type: 'manual',
       question,
       answer,
-      tags: tags ? tags.split(',').map(tag => tag.trim()) : []
+      tags: tags ? tags.split(',').map(t => t.trim()) : []
     });
 
-    await entry.save();
-
-    // Update domain's KB timestamp
-    await Domain.findByIdAndUpdate(req.params.domainId, {
-      'kbSettings.lastUpdated': new Date()
-    });
+    await Domain.update({ kbSettings: { lastUpdated: new Date() } }, { where: { id: req.params.domainId } });
 
     res.status(201).json(entry);
   } catch (error) {
@@ -112,89 +94,47 @@ router.post('/:domainId/manual', authenticateToken, async (req, res) => {
 // Upload KB file (CSV/Excel)
 router.post('/:domainId/upload', authenticateToken, upload.single('file'), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
-    }
-
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
     const entries = [];
     const filePath = req.file.path;
 
+    const processRow = row => {
+      if (row.question && row.answer) {
+        entries.push({
+          domainId: req.params.domainId,
+          type: 'upload',
+          question: row.question,
+          answer: row.answer,
+          metadata: { filename: req.file.originalname, fileSize: req.file.size, uploadDate: new Date() }
+        });
+      }
+    };
+
     if (req.file.mimetype === 'text/csv') {
-      // Process CSV file
       const results = [];
       fs.createReadStream(filePath)
         .pipe(csv())
-        .on('data', (data) => results.push(data))
+        .on('data', row => results.push(row))
         .on('end', async () => {
-          for (const row of results) {
-            if (row.question && row.answer) {
-              entries.push({
-                domainId: req.params.domainId,
-                type: 'upload',
-                question: row.question,
-                answer: row.answer,
-                metadata: {
-                  filename: req.file.originalname,
-                  fileSize: req.file.size,
-                  uploadDate: new Date()
-                }
-              });
-            }
-          }
-          
-          await KnowledgeBaseEntry.insertMany(entries);
-          
-          // Update domain's KB timestamp
-          await Domain.findByIdAndUpdate(req.params.domainId, {
-            'kbSettings.lastUpdated': new Date()
-          });
-
-          // Clean up uploaded file
+          results.forEach(processRow);
+          await KnowledgeBaseEntry.bulkCreate(entries);
+          await Domain.update({ kbSettings: { lastUpdated: new Date() } }, { where: { id: req.params.domainId } });
           fs.unlinkSync(filePath);
-          
-          res.json({ message: `Successfully uploaded ${entries.length} entries`, count: entries.length });
+          res.json({ message: `Uploaded ${entries.length} entries`, count: entries.length });
         });
     } else {
-      // Process Excel file
       const workbook = xlsx.readFile(filePath);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const data = xlsx.utils.sheet_to_json(worksheet);
-
-      for (const row of data) {
-        if (row.question && row.answer) {
-          entries.push({
-            domainId: req.params.domainId,
-            type: 'upload',
-            question: row.question,
-            answer: row.answer,
-            metadata: {
-              filename: req.file.originalname,
-              fileSize: req.file.size,
-              uploadDate: new Date()
-            }
-          });
-        }
-      }
-
-      await KnowledgeBaseEntry.insertMany(entries);
-      
-      // Update domain's KB timestamp
-      await Domain.findByIdAndUpdate(req.params.domainId, {
-        'kbSettings.lastUpdated': new Date()
-      });
-
-      // Clean up uploaded file
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const data = xlsx.utils.sheet_to_json(sheet);
+      data.forEach(processRow);
+      await KnowledgeBaseEntry.bulkCreate(entries);
+      await Domain.update({ kbSettings: { lastUpdated: new Date() } }, { where: { id: req.params.domainId } });
       fs.unlinkSync(filePath);
-      
-      res.json({ message: `Successfully uploaded ${entries.length} entries`, count: entries.length });
+      res.json({ message: `Uploaded ${entries.length} entries`, count: entries.length });
     }
   } catch (error) {
     console.error('Upload KB file error:', error);
-    // Clean up file if error occurs
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     res.status(500).json({ message: 'Error processing uploaded file' });
   }
 });
@@ -202,15 +142,10 @@ router.post('/:domainId/upload', authenticateToken, upload.single('file'), async
 // Delete KB entry
 router.delete('/:domainId/entries/:entryId', authenticateToken, async (req, res) => {
   try {
-    const entry = await KnowledgeBaseEntry.findOneAndDelete({
-      _id: req.params.entryId,
-      domainId: req.params.domainId
+    const deleted = await KnowledgeBaseEntry.destroy({
+      where: { id: req.params.entryId, domainId: req.params.domainId }
     });
-
-    if (!entry) {
-      return res.status(404).json({ message: 'KB entry not found' });
-    }
-
+    if (!deleted) return res.status(404).json({ message: 'KB entry not found' });
     res.json({ message: 'KB entry deleted successfully' });
   } catch (error) {
     console.error('Delete KB entry error:', error);
@@ -218,68 +153,35 @@ router.delete('/:domainId/entries/:entryId', authenticateToken, async (req, res)
   }
 });
 
-// Crawl domain (placeholder)
-
-
+// Crawl domain
 router.post('/:domainId/crawl', authenticateToken, async (req, res) => {
   try {
-    const { domainId } = req.params;
+    const domain = await Domain.findByPk(req.params.domainId);
+    if (!domain) return res.status(404).json({ message: 'Domain not found' });
+    if (!domain.url) return res.status(400).json({ message: 'Domain URL is empty' });
 
-    // 1. Fetch domain URL from DB
-    const domain = await Domain.findById(domainId);
-    if (!domain) {
-      return res.status(404).json({ message: 'Domain not found' });
-    }
-
-    const url = domain.url;
-    if (!url) {
-      return res.status(400).json({ message: 'Domain URL is empty' });
-    }
-
-    // 2. Fetch page content
-    const response = await axios.get(url);
-    const html = response.data;
-
-    // 3. Parse HTML with cheerio
-    const $ = cheerio.load(html);
+    const response = await axios.get(domain.url);
+    const $ = cheerio.load(response.data);
     const entries = [];
 
-    // Extract headings and paragraphs
     $('h1,h2,h3,p').each((i, el) => {
       const text = $(el).text().trim();
-      if (text.length > 20) { // skip very short content
-        entries.push({
-          domainId,
-          type: 'crawled',
-          content: text,
-          metadata: {
-            url,
-            crawlDate: new Date()
-          }
-        });
-      }
+      if (text.length > 20) entries.push({
+        domainId: domain.id,
+        type: 'crawled',
+        content: text,
+        metadata: { url: domain.url, crawlDate: new Date() }
+      });
     });
 
-    // 4. Save to KnowledgeBaseEntry
-    if (entries.length > 0) {
-      await KnowledgeBaseEntry.insertMany(entries);
-    }
+    if (entries.length > 0) await KnowledgeBaseEntry.bulkCreate(entries);
+    await Domain.update({ kbSettings: { lastUpdated: new Date() } }, { where: { id: domain.id } });
 
-    // 5. Update domain's KB timestamp
-    await Domain.findByIdAndUpdate(domainId, {
-      'kbSettings.lastUpdated': new Date()
-    });
-
-    res.json({
-      message: `Domain crawl completed successfully. ${entries.length} entries added.`,
-      count: entries.length
-    });
-
+    res.json({ message: `Crawl completed, ${entries.length} entries added.`, count: entries.length });
   } catch (error) {
     console.error('Crawl domain error:', error);
     res.status(500).json({ message: 'Error crawling domain', error: error.message });
   }
 });
-
 
 export default router;

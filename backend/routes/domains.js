@@ -1,42 +1,40 @@
 import express from 'express';
+import crypto from 'crypto';
+import { Op } from 'sequelize';
 import Domain from '../models/Domain.js';
 import TokenUsageLog from '../models/TokenUsageLog.js';
 import { authenticateToken } from '../middleware/auth.js';
-import crypto from 'crypto';
-
 
 const router = express.Router();
 
 // Get all domains with pagination and search
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { page = 1, limit = 10, search = '', sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
-    
-    const query = search 
-      ? { 
-          $or: [
-            { name: { $regex: search, $options: 'i' } },
-            { url: { $regex: search, $options: 'i' } },
-            { domainId: { $regex: search, $options: 'i' } }
-          ]
+    const { page = 1, limit = 10, search = '', sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
+    const offset = (page - 1) * limit;
+
+    const where = search
+      ? {
+          [Op.or]: [
+            { name: { [Op.like]: `%${search}%` } },
+            { url: { [Op.like]: `%${search}%` } },
+            { domainId: { [Op.like]: `%${search}%` } },
+          ],
         }
       : {};
 
-    const sortObj = {};
-    sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
-
-    const domains = await Domain.find(query)
-      .sort(sortObj)
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
-    const total = await Domain.countDocuments(query);
+    const { rows: domains, count: total } = await Domain.findAndCountAll({
+      where,
+      order: [[sortBy, sortOrder.toUpperCase()]],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
 
     res.json({
       domains,
       totalPages: Math.ceil(total / limit),
-      currentPage: page,
-      total
+      currentPage: parseInt(page),
+      total,
     });
   } catch (error) {
     console.error('Get domains error:', error);
@@ -47,10 +45,8 @@ router.get('/', authenticateToken, async (req, res) => {
 // Get domain by ID
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const domain = await Domain.findById(req.params.id);
-    if (!domain) {
-      return res.status(404).json({ message: 'Domain not found' });
-    }
+    const domain = await Domain.findByPk(req.params.id);
+    if (!domain) return res.status(404).json({ message: 'Domain not found' });
     res.json(domain);
   } catch (error) {
     console.error('Get domain error:', error);
@@ -58,31 +54,24 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-
-
 // Create new domain
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const { name, url } = req.body;
+    if (!name || !url) return res.status(400).json({ message: 'Name and URL are required' });
 
-    if (!name || !url) {
-      return res.status(400).json({ message: 'Name and URL are required' });
-    }
+    const domainId = crypto.randomUUID();
+    const apiEndpoint = `/api/chat/${domainId}`;
+    const authToken = crypto.randomBytes(32).toString('hex');
 
-    const domainId = crypto.randomUUID(); // Unique ID for the domain
-    const apiEndpoint = `/api/chat/${domainId}`; // API endpoint for this domain
-    const authToken = crypto.randomBytes(32).toString('hex'); // Secret auth token
-
-    const domain = new Domain({
+    const domain = await Domain.create({
       name,
       url,
       domainId,
       apiEndpoint,
       authToken,
-      status: 'active' // default active
+      status: 'active',
     });
-
-    await domain.save();
 
     res.status(201).json(domain);
   } catch (error) {
@@ -91,26 +80,21 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
-
 // Update domain
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { name, url, status, kbSettings } = req.body;
-    
-    const updateData = { name, url, status };
-    if (kbSettings) {
-      updateData.kbSettings = kbSettings;
-    }
+    const domain = await Domain.findByPk(req.params.id);
 
-    const domain = await Domain.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    if (!domain) return res.status(404).json({ message: 'Domain not found' });
 
-    if (!domain) {
-      return res.status(404).json({ message: 'Domain not found' });
-    }
+    await domain.update({
+      name,
+      url,
+      status,
+      ...(kbSettings && { kbSettings }),
+      updatedAt: new Date(),
+    });
 
     res.json(domain);
   } catch (error) {
@@ -122,13 +106,11 @@ router.put('/:id', authenticateToken, async (req, res) => {
 // Delete domain
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    const domain = await Domain.findByIdAndDelete(req.params.id);
-    if (!domain) {
-      return res.status(404).json({ message: 'Domain not found' });
-    }
+    const domain = await Domain.findByPk(req.params.id);
+    if (!domain) return res.status(404).json({ message: 'Domain not found' });
 
-    // Also delete related token usage logs
-    await TokenUsageLog.deleteMany({ domainId: req.params.id });
+    await TokenUsageLog.destroy({ where: { domainId: domain.id } });
+    await domain.destroy();
 
     res.json({ message: 'Domain deleted successfully' });
   } catch (error) {
@@ -140,18 +122,13 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 // Update KB timestamp
 router.post('/:id/kb-update', authenticateToken, async (req, res) => {
   try {
-    const domain = await Domain.findByIdAndUpdate(
-      req.params.id,
-      { 
-        'kbSettings.lastUpdated': new Date(),
-        updatedAt: new Date()
-      },
-      { new: true }
-    );
+    const domain = await Domain.findByPk(req.params.id);
+    if (!domain) return res.status(404).json({ message: 'Domain not found' });
 
-    if (!domain) {
-      return res.status(404).json({ message: 'Domain not found' });
-    }
+    await domain.update({
+      kbSettings: { ...domain.kbSettings, lastUpdated: new Date() },
+      updatedAt: new Date(),
+    });
 
     res.json({ message: 'KB updated successfully', domain });
   } catch (error) {

@@ -1,55 +1,57 @@
-import mongoose from 'mongoose';
+import { DataTypes, Model } from 'sequelize';
 import bcrypt from 'bcryptjs';
+import { sequelize } from '../config/database.js';
 
-const adminSchema = new mongoose.Schema({
-email: {
-type: String,
-required: true,
-unique: true,
-lowercase: true,
-trim: true
-},
-password: {
-type: String,
-required: true,
-minlength: 6
-},
-name: {
-type: String,
-required: true,
-trim: true
-},
-role: {
-type: String,
-    default: 'admin',
-    enum: ['admin', 'super_admin']
-},
-  createdAt: {
-    type: Date,
-    default: Date.now
-},
-lastLogin: {
-    type: Date,
-    default: null
+class Admin extends Model {
+  // Instance method to compare password
+  async comparePassword(password) {
+    return await bcrypt.compare(password, this.password);
+  }
 }
-});
 
-// Hash password before saving
-adminSchema.pre('save', async function(next) {
-if (!this.isModified('password')) return next();
+Admin.init(
+  {
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    email: { 
+      type: DataTypes.STRING, 
+      allowNull: false, 
+      unique: true, 
+      validate: { isEmail: true }
+    },
+    password: { 
+      type: DataTypes.STRING, 
+      allowNull: false, 
+      validate: { len: [6, 255] } 
+    },
+    name: { type: DataTypes.STRING, allowNull: false },
+    role: { 
+      type: DataTypes.ENUM('admin', 'super_admin'), 
+      defaultValue: 'admin' 
+    },
+    createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    lastLogin: { type: DataTypes.DATE, allowNull: true },
+  },
+  {
+    sequelize,
+    modelName: 'Admin',
+    tableName: 'admins',
+    timestamps: true, // automatically adds createdAt & updatedAt
+    hooks: {
+      // Hash password before creating or updating
+      beforeCreate: async (admin, options) => {
+        if (admin.password) {
+          const salt = await bcrypt.genSalt(10);
+          admin.password = await bcrypt.hash(admin.password, salt);
+        }
+      },
+      beforeUpdate: async (admin, options) => {
+        if (admin.changed('password')) {
+          const salt = await bcrypt.genSalt(10);
+          admin.password = await bcrypt.hash(admin.password, salt);
+        }
+      },
+    },
+  }
+);
 
-try {
-const salt = await bcrypt.genSalt(10);
-this.password = await bcrypt.hash(this.password, salt);
-next();
-} catch (error) {
-next(error);
-}
-});
-
-// Compare password method
-adminSchema.methods.comparePassword = async function(password) {
-  return await bcrypt.compare(password, this.password);
-};
-
-export default mongoose.model('Admin', adminSchema);
+export default Admin;
