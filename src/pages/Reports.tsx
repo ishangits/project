@@ -112,7 +112,7 @@ const Reports: React.FC = () => {
             >
               <option value="">All Domains</option>
               {domains.map((domain) => (
-                <option key={domain._id} value={domain._id}>
+                <option key={domain._id || domain.name} value={domain._id}>
                   {domain.name}
                 </option>
               ))}

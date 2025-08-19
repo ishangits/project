@@ -23,7 +23,7 @@ import {
   BarElement,
 } from 'chart.js';
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
-import { format, subDays } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 ChartJS.register(
   CategoryScale,
@@ -36,6 +36,18 @@ ChartJS.register(
   Tooltip,
   Legend
 );
+
+// Safe date formatting
+const safeFormatDate = (date: string | null | undefined, formatStr: string) => {
+  if (!date) return 'N/A';
+  try {
+    const parsed = parseISO(date);
+    if (isNaN(parsed.getTime())) return 'N/A';
+    return format(parsed, formatStr);
+  } catch {
+    return 'N/A';
+  }
+};
 
 interface DashboardStats {
   totalDomains: number;
@@ -107,7 +119,7 @@ const Dashboard: React.FC = () => {
 
   // Prepare chart data
   const lineChartData = {
-    labels: stats.dailyUsage.map(item => format(new Date(item._id), 'MMM dd')),
+    labels: stats.dailyUsage.map(item => safeFormatDate(item._id, 'MMM dd')),
     datasets: [
       {
         label: 'Tokens Used',
@@ -197,7 +209,7 @@ const Dashboard: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Tokens</p>
               <p className="text-2xl font-bold text-gray-900">
-                {stats.totalTokens.toLocaleString()}
+  {Number(stats.totalTokens || 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -211,7 +223,7 @@ const Dashboard: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Cost</p>
               <p className="text-2xl font-bold text-gray-900">
-                ${stats.totalCost.toFixed(2)}
+  ${Number(stats.totalCost || 0).toFixed(2)}
               </p>
             </div>
           </div>
@@ -225,7 +237,7 @@ const Dashboard: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Requests</p>
               <p className="text-2xl font-bold text-gray-900">
-                {stats.totalRequests.toLocaleString()}
+  {Number(stats.totalRequests || 0).toLocaleString()}
               </p>
             </div>
           </div>
@@ -234,7 +246,6 @@ const Dashboard: React.FC = () => {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Token Usage Trend */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Token Usage Trend (30 Days)
@@ -244,7 +255,6 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Usage by Domain */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Usage by Domain
@@ -259,7 +269,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Domains Overview */}
+      {/* Domains Overview Table */}
       <div className="bg-white rounded-lg shadow-md">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
@@ -292,7 +302,7 @@ const Dashboard: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {domains.map((domain) => (
-                <tr key={domain._id} className="hover:bg-gray-50">
+                <tr key={domain._id ||  domain.name} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-gray-900">
