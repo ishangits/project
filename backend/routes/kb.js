@@ -8,6 +8,8 @@ import Domain from '../models/Domain.js';
 import { authenticateToken } from '../middleware/auth.js';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { normalizeEntry, insertOrUpdateEntries } from '../utils/kbHelper.js';
+
 
 
 const router = express.Router();
@@ -112,92 +114,60 @@ router.post('/:domainId/manual', authenticateToken, async (req, res) => {
 // Upload KB file (CSV/Excel)
 router.post('/:domainId/upload', authenticateToken, upload.single('file'), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
-    }
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-    const entries = [];
     const filePath = req.file.path;
+    let entries = [];
 
     if (req.file.mimetype === 'text/csv') {
-      // Process CSV file
       const results = [];
       fs.createReadStream(filePath)
-        .pipe(csv())
-        .on('data', (data) => results.push(data))
+        .pipe(csv({ separator: '\t' }))
+        .on('data', row => results.push(row))
         .on('end', async () => {
-          for (const row of results) {
-            if (row.question && row.answer) {
-              entries.push({
-                domainId: req.params.domainId,
-                type: 'upload',
-                question: row.question,
-                answer: row.answer,
-                metadata: {
-                  filename: req.file.originalname,
-                  fileSize: req.file.size,
-                  uploadDate: new Date()
-                }
-              });
-            }
-          }
-          
-          await KnowledgeBaseEntry.insertMany(entries);
-          
-          // Update domain's KB timestamp
-          await Domain.findByIdAndUpdate(req.params.domainId, {
-            'kbSettings.lastUpdated': new Date()
-          });
+          entries = results.map(row => normalizeEntry(row, req.file.originalname, req.params.domainId));
+          const count = await insertOrUpdateEntries(entries);
 
-          // Clean up uploaded file
+          await Domain.findByIdAndUpdate(req.params.domainId, { 'kbSettings.lastUpdated': new Date() });
           fs.unlinkSync(filePath);
-          
-          res.json({ message: `Successfully uploaded ${entries.length} entries`, count: entries.length });
+          res.json({ message: `Uploaded ${count} entries from CSV`, count });
         });
-    } else {
-      // Process Excel file
+
+    } else if (req.file.mimetype.includes('excel')) {
       const workbook = xlsx.readFile(filePath);
       const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const data = xlsx.utils.sheet_to_json(worksheet);
+      const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+      entries = data.map(row => normalizeEntry(row, req.file.originalname, req.params.domainId));
+      const count = await insertOrUpdateEntries(entries);
 
-      for (const row of data) {
-        if (row.question && row.answer) {
-          entries.push({
-            domainId: req.params.domainId,
-            type: 'upload',
-            question: row.question,
-            answer: row.answer,
-            metadata: {
-              filename: req.file.originalname,
-              fileSize: req.file.size,
-              uploadDate: new Date()
-            }
-          });
-        }
-      }
-
-      await KnowledgeBaseEntry.insertMany(entries);
-      
-      // Update domain's KB timestamp
-      await Domain.findByIdAndUpdate(req.params.domainId, {
-        'kbSettings.lastUpdated': new Date()
-      });
-
-      // Clean up uploaded file
+      await Domain.findByIdAndUpdate(req.params.domainId, { 'kbSettings.lastUpdated': new Date() });
       fs.unlinkSync(filePath);
-      
-      res.json({ message: `Successfully uploaded ${entries.length} entries`, count: entries.length });
+      res.json({ message: `Uploaded ${count} entries from Excel`, count });
+
+    } else if (req.file.mimetype === 'application/pdf') {
+      const buffer = fs.readFileSync(filePath);
+      const data = await pdf(buffer);
+      const lines = data.text.split('\n').map(l => l.trim()).filter(Boolean);
+
+      entries = lines.map(line => {
+        const [question, answer] = line.split('\t'); // adapt separator
+        return { suburbname: question, postcode: '', response: answer };
+      }).map(row => normalizeEntry(row, req.file.originalname, req.params.domainId));
+
+      const count = await insertOrUpdateEntries(entries);
+
+      await Domain.findByIdAndUpdate(req.params.domainId, { 'kbSettings.lastUpdated': new Date() });
+      fs.unlinkSync(filePath);
+      res.json({ message: `Uploaded ${count} entries from PDF`, count });
     }
+
   } catch (error) {
     console.error('Upload KB file error:', error);
-    // Clean up file if error occurs
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-    res.status(500).json({ message: 'Error processing uploaded file' });
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    res.status(500).json({ message: 'Error processing uploaded file', error: error.message });
   }
 });
+
 
 // Delete KB entry
 router.delete('/:domainId/entries/:entryId', authenticateToken, async (req, res) => {

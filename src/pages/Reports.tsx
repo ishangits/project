@@ -245,7 +245,7 @@ const Reports: React.FC = () => {
             <h4 className="font-medium text-gray-900 mb-2">CSV Reports Include:</h4>
             <ul className="text-sm text-gray-600 space-y-1">
               <li>• Date and time of each request</li>
-              <li>• Domain name and ID</li>
+              <li>• Name and ID</li>
               <li>• Tokens used per request</li>
               <li>• Request type (chat, training, etc.)</li>
               <li>• Calculated costs</li>

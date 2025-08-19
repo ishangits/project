@@ -220,14 +220,14 @@ const KnowledgeBase: React.FC = () => {
             </select>
           </div>
           <div className="flex space-x-3">
-            <button
+            {/* <button
               onClick={handleCrawl}
               disabled={!selectedDomain}
               className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
             >
               <Globe className="h-4 w-4 mr-2" />
               Crawl Domain
-            </button>
+            </button> */}
             <button
               onClick={() => fetchEntries(selectedDomain, currentPage, searchTerm, typeFilter)}
               disabled={!selectedDomain}
@@ -479,16 +479,16 @@ const KnowledgeBase: React.FC = () => {
             <form onSubmit={handleFileUpload} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Select File (CSV or Excel)
+                  Select File (CSV or Excel/PDF)
                 </label>
                 <input
                   type="file"
-                  accept=".csv,.xlsx,.xls"
+                  accept=".csv,.xlsx,.xls,.pdf"
                   onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  File should have 'question' and 'answer' columns
+                  File should have 'question' and 'answer' columns (PDFs will extract text automatically)
                 </p>
               </div>
               <div className="flex justify-end space-x-3 pt-4">
