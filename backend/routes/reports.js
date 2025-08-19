@@ -47,7 +47,7 @@ router.get('/csv', authenticateToken, async (req, res) => {
       path: filepath,
       header: [
         { id: 'date', title: 'Date' },
-        { id: 'domain', title: 'Domain Name' },
+        { id: 'domain', title: 'Name' },
         { id: 'domainId', title: 'Domain ID' },
         { id: 'tokensUsed', title: 'Tokens Used' },
         { id: 'requestType', title: 'Request Type' },

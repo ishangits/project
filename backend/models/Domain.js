@@ -44,5 +44,4 @@ Domain.init(
     },
   }
 );
-
 export default Domain;

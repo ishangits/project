@@ -9,6 +9,8 @@ import Domain from '../models/Domain.js';
 import { authenticateToken } from '../middleware/auth.js';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { normalizeEntry, insertOrUpdateEntries } from '../utils/kbHelper.js';
+
 
 const router = express.Router();
 
@@ -97,6 +99,7 @@ router.post('/:domainId/upload', authenticateToken, upload.single('file'), async
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
     const entries = [];
     const filePath = req.file.path;
+    let entries = [];
 
     const processRow = row => {
       if (row.question && row.answer) {
@@ -131,13 +134,17 @@ router.post('/:domainId/upload', authenticateToken, upload.single('file'), async
       await Domain.update({ kbSettings: { lastUpdated: new Date() } }, { where: { id: req.params.domainId } });
       fs.unlinkSync(filePath);
       res.json({ message: `Uploaded ${entries.length} entries`, count: entries.length });
+
     }
+
   } catch (error) {
     console.error('Upload KB file error:', error);
     if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     res.status(500).json({ message: 'Error processing uploaded file' });
+
   }
 });
+
 
 // Delete KB entry
 router.delete('/:domainId/entries/:entryId', authenticateToken, async (req, res) => {

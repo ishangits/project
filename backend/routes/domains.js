@@ -42,18 +42,21 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+
 // Get domain by ID
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
+
     const domain = await Domain.findByPk(req.params.id);
     if (!domain) return res.status(404).json({ message: 'Domain not found' });
     res.json(domain);
-  } catch (error) {
+    } catch (error) {
     console.error('Get domain error:', error);
     res.status(500).json({ message: 'Error fetching domain' });
   }
 });
 
+// Create new domain
 // Create new domain
 router.post('/', authenticateToken, async (req, res) => {
   try {

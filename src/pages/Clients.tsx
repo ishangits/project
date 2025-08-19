@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import {
@@ -7,7 +8,6 @@ import {
   Trash2,
   ExternalLink,
   Globe,
-  Key,
   Calendar,
   RefreshCw,
   Eye,
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 
 interface Domain {
+  openAIKey: string;
   _id: string;
   name: string;
   url: string;
@@ -54,6 +55,7 @@ const Clients: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     url: '',
+    openAIKey: "" ,
     status: 'active'
   });
 
@@ -86,7 +88,6 @@ const Clients: React.FC = () => {
     setCurrentPage(1);
     fetchDomains(1, searchTerm);
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -97,7 +98,7 @@ const Clients: React.FC = () => {
       }
       setShowModal(false);
       setEditingDomain(null);
-      setFormData({ name: '', url: '', status: 'active' });
+      setFormData({ name: '', url: '',openAIKey: "", status: 'active' });
       fetchDomains(currentPage, searchTerm);
     } catch (error) {
       console.error('Error saving domain:', error);
@@ -109,7 +110,8 @@ const Clients: React.FC = () => {
     setFormData({
       name: domain.name,
       url: domain.url,
-      status: domain.status
+      status: domain.status,
+      openAIKey: domain.openAIKey
     });
     setShowModal(true);
   };
@@ -136,7 +138,7 @@ const Clients: React.FC = () => {
 
   const openModal = () => {
     setEditingDomain(null);
-    setFormData({ name: '', url: '', status: 'active' });
+    setFormData({ name: '', url: '',openAIKey: "", status: 'active' });
     setShowModal(true);
   };
 
@@ -423,7 +425,7 @@ const Clients: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Domain Name
+                  Name
                 </label>
                 <input
                   type="text"
@@ -431,7 +433,7 @@ const Clients: React.FC = () => {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter domain name"
+                  placeholder="Enter name"
                 />
               </div>
               <div>
@@ -447,6 +449,20 @@ const Clients: React.FC = () => {
                   placeholder="https://example.com"
                 />
               </div>
+              <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  openAI Key
+                </label>
+                      <input
+  type="text"
+  placeholder="OpenAI Key"
+  value={formData.openAIKey}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+
+  onChange={(e) => setFormData({ ...formData, openAIKey: e.target.value })}
+/>
+              </div>
+        
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Status
@@ -538,7 +554,7 @@ const Clients: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end pt-4">
+             <div className="flex justify-end pt-4">
               <button
                 onClick={() => setShowTokenModal(false)}
                 className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
