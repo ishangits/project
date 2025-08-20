@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 interface Domain {
-  _id: string;
+  id: string;
   name: string;
   url: string;
   domainId: string;
@@ -61,7 +61,7 @@ const KnowledgeBase: React.FC = () => {
       const response = await apiService.getDomains({ limit: 100 });
       setDomains(response.domains);
       if (response.domains.length > 0 && !selectedDomain) {
-        setSelectedDomain(response.domains[0]._id);
+        setSelectedDomain(response.domains[0].id);
       }
     } catch (error) {
       console.error('Error fetching domains:', error);
@@ -213,7 +213,7 @@ const KnowledgeBase: React.FC = () => {
             >
               <option value="">Select a domain...</option>
               {domains.map((domain) => (
-                <option key={domain._id || domain.name} value={domain._id}>
+                <option key={domain.id || domain.name} value={domain.id}>
                   {domain.name} ({domain.url})
                 </option>
               ))}

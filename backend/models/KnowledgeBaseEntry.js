@@ -22,6 +22,8 @@ KnowledgeBaseEntry.init(
     },
     question: { type: DataTypes.TEXT },
     answer: { type: DataTypes.TEXT },
+     suburb: { type: DataTypes.TEXT },
+    postcode: { type: DataTypes.TEXT },
     content: { type: DataTypes.TEXT },
     source: { type: DataTypes.STRING },
     metadata: { type: DataTypes.JSON, defaultValue: {} },

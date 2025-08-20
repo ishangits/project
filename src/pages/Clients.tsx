@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 
 interface Domain {
+  id: string;
   openAIKey: string;
-  _id: string;
   name: string;
   url: string;
   domainId: string;
@@ -92,7 +92,7 @@ const Clients: React.FC = () => {
     e.preventDefault();
     try {
       if (editingDomain) {
-        await apiService.updateDomain(editingDomain._id, formData);
+        await apiService.updateDomain(editingDomain.id, formData);
       } else {
         await apiService.createDomain(formData);
       }
@@ -150,7 +150,7 @@ const Clients: React.FC = () => {
   const showInvoices = async (domain: Domain) => {
     setSelectedDomain(domain);
     setShowInvoicesModal(true);
-    await fetchInvoices(domain._id, 1);
+    await fetchInvoices(domain.id, 1);
   };
 
   const fetchInvoices = async (domainId: string, page = 1) => {
@@ -184,10 +184,10 @@ const Clients: React.FC = () => {
         dueDate: invoiceFormData.dueDate || undefined
       };
 
-      await apiService.createInvoice(selectedDomain._id, invoiceData);
+      await apiService.createInvoice(selectedDomain.id, invoiceData);
       setShowCreateInvoiceModal(false);
       setInvoiceFormData({ amount: '', currency: 'USD', description: '', dueDate: '' });
-      await fetchInvoices(selectedDomain._id, invoicePage);
+      await fetchInvoices(selectedDomain.id, invoicePage);
     } catch (error) {
       console.error('Error creating invoice:', error);
       alert('Error creating invoice. Please try again.');
@@ -198,7 +198,7 @@ const Clients: React.FC = () => {
     try {
       await apiService.updateInvoiceStatus(invoiceId, { status });
       if (selectedDomain) {
-        await fetchInvoices(selectedDomain._id, invoicePage);
+        await fetchInvoices(selectedDomain.id, invoicePage);
       }
     } catch (error) {
       console.error('Error updating invoice status:', error);
@@ -292,7 +292,7 @@ const Clients: React.FC = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {domains.map((domain) => (
-                    <tr key={domain._id || domain.name} className="hover:bg-gray-50">
+                    <tr key={domain.id || domain.name} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
@@ -308,9 +308,9 @@ const Clients: React.FC = () => {
                               <ExternalLink className="h-3 w-3 mr-1" />
                               {domain.url}
                             </div>
-                            <div className="text-xs text-gray-400">
-                              ID: {domain.domainId}
-                            </div>
+                            {/* <div className="text-xs text-gray-400">
+                              ID: {domain.id}
+                            </div> */}
                           </div>
                         </div>
                       </td>
@@ -336,7 +336,7 @@ const Clients: React.FC = () => {
                               : 'Never'}
                           </div>
                           <button
-                            onClick={() => handleKBUpdate(domain._id)}
+                            onClick={() => handleKBUpdate(domain.id)}
                             className="inline-flex items-center text-xs text-blue-600 hover:text-blue-700"
                           >
                             <RefreshCw className="h-3 w-3 mr-1" />
@@ -371,7 +371,7 @@ const Clients: React.FC = () => {
                             <Edit3 className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => handleDelete(domain._id)}
+                            onClick={() => handleDelete(domain.id)}
                             className="text-red-600 hover:text-red-900"
                             title="Delete Domain"
                           >
@@ -543,10 +543,10 @@ const Clients: React.FC = () => {
                 </label>
                 <div className="flex items-center space-x-2">
                   <code className="flex-1 p-2 bg-gray-100 rounded text-sm font-mono">
-                    {selectedDomain.domainId}
+                    {selectedDomain.id}
                   </code>
                   <button
-                    onClick={() => copyToClipboard(selectedDomain.domainId)}
+                    onClick={() => copyToClipboard(selectedDomain.id)}
                     className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
                   >
                     Copy
@@ -625,7 +625,7 @@ const Clients: React.FC = () => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {invoices.map((invoice) => (
-                        <tr key={invoice._id} className="hover:bg-gray-50">
+                        <tr key={invoice.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {invoice.invoiceId}
                           </td>
@@ -653,13 +653,13 @@ const Clients: React.FC = () => {
                               {invoice.status === 'pending' && (
                                 <>
                                   <button
-                                    onClick={() => handleUpdateInvoiceStatus(invoice._id, 'paid')}
+                                    onClick={() => handleUpdateInvoiceStatus(invoice.id, 'paid')}
                                     className="text-green-600 hover:text-green-900 text-xs px-2 py-1 border border-green-600 rounded"
                                   >
                                     Mark Paid
                                   </button>
                                   <button
-                                    onClick={() => handleUpdateInvoiceStatus(invoice._id, 'failed')}
+                                    onClick={() => handleUpdateInvoiceStatus(invoice.id, 'failed')}
                                     className="text-red-600 hover:text-red-900 text-xs px-2 py-1 border border-red-600 rounded"
                                   >
                                     Mark Failed
@@ -668,7 +668,7 @@ const Clients: React.FC = () => {
                               )}
                               {invoice.status === 'failed' && (
                                 <button
-                                  onClick={() => handleUpdateInvoiceStatus(invoice._id, 'pending')}
+                                  onClick={() => handleUpdateInvoiceStatus(invoice.id, 'pending')}
                                   className="text-yellow-600 hover:text-yellow-900 text-xs px-2 py-1 border border-yellow-600 rounded"
                                 >
                                   Mark Pending
@@ -701,7 +701,7 @@ const Clients: React.FC = () => {
                           onClick={() => {
                             const newPage = invoicePage - 1;
                             setInvoicePage(newPage);
-                            fetchInvoices(selectedDomain._id, newPage);
+                            fetchInvoices(selectedDomain.id, newPage);
                           }}
                           disabled={invoicePage === 1}
                           className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
@@ -712,7 +712,7 @@ const Clients: React.FC = () => {
                           onClick={() => {
                             const newPage = invoicePage + 1;
                             setInvoicePage(newPage);
-                            fetchInvoices(selectedDomain._id, newPage);
+                            fetchInvoices(selectedDomain.id, newPage);
                           }}
                           disabled={invoicePage === invoiceTotalPages}
                           className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"

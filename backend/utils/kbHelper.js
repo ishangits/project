@@ -31,14 +31,13 @@ export function normalizeEntry(row, fileName, domainId, type = 'upload') {
 export async function insertOrUpdateEntries(entries) {
   if (!entries.length) return 0;
 
-  const bulkOps = entries.map(entry => ({
-    updateOne: {
-      filter: { domainId: entry.domainId, suburb: entry.suburb, postcode: entry.postcode },
-      update: { $set: entry },
-      upsert: true
-    }
-  }));
+  // Make sure you have a UNIQUE constraint on (domainId, suburb, postcode)
+  const result = await KnowledgeBaseEntry.bulkCreate(entries, {
+    updateOnDuplicate: [
+      'type', 'question', 'answer', 'council', 'lat', 'lng',
+      'status', 'tags', 'metadata', 'updatedAt'
+    ]
+  });
 
-  const result = await KnowledgeBaseEntry.bulkWrite(bulkOps);
-  return result.upsertedCount + result.modifiedCount;
+  return result.length; // Number of inserted/updated rows
 }

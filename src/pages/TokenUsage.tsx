@@ -128,7 +128,7 @@ const TokenUsage: React.FC = () => {
     try {
       setLoading(true);
       const params: any = { page, limit: 10 };
-      if (selectedDomain) params.domainId = selectedDomain;
+      if (selectedDomain) params.id = selectedDomain;
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
       if (requestType) params.requestType = requestType;
@@ -148,7 +148,7 @@ const TokenUsage: React.FC = () => {
     try {
       setStatsLoading(true);
       const params: any = { days: 30 };
-      if (selectedDomain) params.domainId = selectedDomain;
+      if (selectedDomain) params.id = selectedDomain;
 
       const response = await apiService.getTokenStats(params);
       setStats(response);
@@ -178,7 +178,7 @@ const TokenUsage: React.FC = () => {
   const downloadReport = async (format: 'csv' | 'pdf') => {
     try {
       const params: any = {};
-      if (selectedDomain) params.domainId = selectedDomain;
+      if (selectedDomain) params.id = selectedDomain;
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
 
