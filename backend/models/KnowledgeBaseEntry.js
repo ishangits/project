@@ -8,7 +8,7 @@ KnowledgeBaseEntry.init(
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     domainId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.STRING(24),   // FIXED: match Domain.id
       allowNull: false,
       references: {
         model: Domain,

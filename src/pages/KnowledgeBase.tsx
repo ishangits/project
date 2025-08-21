@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import {
@@ -6,7 +7,6 @@ import {
   Search,
   Trash2,
   FileText,
-  Globe,
   Calendar,
   RefreshCw,
   Filter
@@ -144,18 +144,6 @@ const KnowledgeBase: React.FC = () => {
       fetchEntries(selectedDomain, currentPage, searchTerm, typeFilter);
     } catch (error) {
       console.error('Error deleting KB entry:', error);
-    }
-  };
-
-  const handleCrawl = async () => {
-    if (!selectedDomain) return;
-
-    try {
-      await apiService.crawlDomain(selectedDomain);
-      alert('Domain crawl initiated successfully!');
-      fetchEntries(selectedDomain, currentPage, searchTerm, typeFilter);
-    } catch (error) {
-      console.error('Error crawling domain:', error);
     }
   };
 

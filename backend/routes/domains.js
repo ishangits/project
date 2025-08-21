@@ -57,10 +57,10 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // ✅ Create new domain
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { name, url, openAIKey } = req.body;
+    const { name, url, openAIKey, dbHost, dbUser, dbPassword, dbDatabase, dbPort   } = req.body;
     if (!name || !url) return res.status(400).json({ message: 'Name and URL are required' });
 
-    const domain = await Domain.create({ name, url, openAIKey });
+    const domain = await Domain.create({ name, url, openAIKey, dbHost, dbUser, dbPassword, dbDatabase,dbPort   });
     res.status(201).json(domain);
   } catch (error) {
     console.error('Create domain error:', error);

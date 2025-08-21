@@ -22,7 +22,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
    const logs = await TokenUsageLog.findAll({
   where,
-  include: [{ model: Domain, as: 'domain', attributes: ['name', 'domainId', 'url'] }],
+  include: [{ model: Domain, as: 'domain', attributes: ['name', 'id', 'url'] }],
   order: [['date', 'DESC']],
   limit: parseInt(limit),
   offset: (page - 1) * limit

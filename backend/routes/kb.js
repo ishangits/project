@@ -10,11 +10,9 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { normalizeEntry, insertOrUpdateEntries } from '../utils/kbHelper.js';
 
-
-
 const router = express.Router();
 
-// Configure multer for file uploads
+// Multer setup
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = 'uploads/';
@@ -42,8 +40,7 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
-// Get KB entries for a domain
-// Get KB entries for a domain
+// ==================== GET KB ENTRIES ====================
 router.get('/:domainId', authenticateToken, async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '', type = '' } = req.query;
@@ -82,9 +79,7 @@ router.get('/:domainId', authenticateToken, async (req, res) => {
   }
 });
 
-
-// Create manual KB entry
-// Create manual KB entry
+// ==================== CREATE MANUAL KB ENTRY ====================
 router.post('/:domainId/manual', authenticateToken, async (req, res) => {
   try {
     const { question, answer, tags } = req.body;
@@ -115,8 +110,7 @@ router.post('/:domainId/manual', authenticateToken, async (req, res) => {
   }
 });
 
-
-// Upload KB file (CSV/Excel)
+// ==================== UPLOAD KB FILE ====================
 router.post('/:domainId/upload', authenticateToken, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
@@ -124,6 +118,10 @@ router.post('/:domainId/upload', authenticateToken, upload.single('file'), async
     const filePath = req.file.path;
     let entries = [];
 
+    const domainId = req.params.domainId;
+    const fileName = req.file.originalname;
+
+    // ---- CSV ----
     if (req.file.mimetype === 'text/csv') {
       const results = [];
       fs.createReadStream(filePath)
@@ -144,6 +142,7 @@ await Domain.update(
           res.json({ message: `Uploaded ${count} entries from CSV`, count });
         });
 
+    // ---- Excel ----
     } else if (req.file.mimetype.includes('excel')) {
       const workbook = xlsx.readFile(filePath);
       const sheetName = workbook.SheetNames[0];
@@ -155,6 +154,7 @@ await Domain.update(
       fs.unlinkSync(filePath);
       res.json({ message: `Uploaded ${count} entries from Excel`, count });
 
+    // ---- PDF ----
     } else if (req.file.mimetype === 'application/pdf') {
       const buffer = fs.readFileSync(filePath);
       const data = await pdf(buffer);
@@ -209,7 +209,6 @@ router.delete('/:domainId/entries/:entryId', authenticateToken, async (req, res)
 router.post('/:domainId/crawl', authenticateToken, async (req, res) => {
   try {
     const { domainId } = req.params;
-
     const domain = await Domain.findByPk(domainId);
     if (!domain) {
       return res.status(404).json({ message: "Domain not found" });

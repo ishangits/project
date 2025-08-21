@@ -9,7 +9,7 @@ Invoice.init(
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     invoiceId: { type: DataTypes.STRING, allowNull: false, unique: true },
     domainId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.STRING(24),   // FIXED: match Domain.id
       allowNull: false,
       references: {
         model: Domain,
