@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import {
@@ -6,14 +7,13 @@ import {
   Search,
   Trash2,
   FileText,
-  Globe,
   Calendar,
   RefreshCw,
   Filter
 } from 'lucide-react';
 
 interface Domain {
-  _id: string;
+  id: string;
   name: string;
   url: string;
   domainId: string;
@@ -61,7 +61,7 @@ const KnowledgeBase: React.FC = () => {
       const response = await apiService.getDomains({ limit: 100 });
       setDomains(response.domains);
       if (response.domains.length > 0 && !selectedDomain) {
-        setSelectedDomain(response.domains[0]._id);
+        setSelectedDomain(response.domains[0].id);
       }
     } catch (error) {
       console.error('Error fetching domains:', error);
@@ -147,18 +147,6 @@ const KnowledgeBase: React.FC = () => {
     }
   };
 
-  const handleCrawl = async () => {
-    if (!selectedDomain) return;
-
-    try {
-      await apiService.crawlDomain(selectedDomain);
-      alert('Domain crawl initiated successfully!');
-      fetchEntries(selectedDomain, currentPage, searchTerm, typeFilter);
-    } catch (error) {
-      console.error('Error crawling domain:', error);
-    }
-  };
-
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'manual':
@@ -213,7 +201,7 @@ const KnowledgeBase: React.FC = () => {
             >
               <option value="">Select a domain...</option>
               {domains.map((domain) => (
-                <option key={domain._id || domain.name} value={domain._id}>
+                <option key={domain.id || domain.name} value={domain.id}>
                   {domain.name} ({domain.url})
                 </option>
               ))}

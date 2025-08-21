@@ -8,7 +8,7 @@ KnowledgeBaseEntry.init(
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     domainId: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.STRING(24),   // FIXED: match Domain.id
       allowNull: false,
       references: {
         model: Domain,
@@ -22,6 +22,8 @@ KnowledgeBaseEntry.init(
     },
     question: { type: DataTypes.TEXT },
     answer: { type: DataTypes.TEXT },
+     suburb: { type: DataTypes.TEXT },
+    postcode: { type: DataTypes.TEXT },
     content: { type: DataTypes.TEXT },
     source: { type: DataTypes.STRING },
     metadata: { type: DataTypes.JSON, defaultValue: {} },

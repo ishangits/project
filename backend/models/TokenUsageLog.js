@@ -8,7 +8,7 @@ TokenUsageLog.init(
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     domainId: {
-      type: DataTypes.INTEGER,
+  type: DataTypes.STRING(24),   // must match Domain.id
       allowNull: false,
       references: {
         model: Domain,
@@ -50,5 +50,5 @@ TokenUsageLog.init(
 
 // Define association
 TokenUsageLog.belongsTo(Domain, { foreignKey: 'domainId', as: 'domain' });
-
+Domain.hasMany(TokenUsageLog, { foreignKey: 'domainId', as: 'logs' });
 export default TokenUsageLog;

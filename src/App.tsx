@@ -1,14 +1,13 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Clients from './pages/Clients';
 import KnowledgeBase from './pages/KnowledgeBase';
 import TokenUsage from './pages/TokenUsage';
 import Reports from './pages/Reports';
+import Domains from './pages/Domains';
 
 function App() {
   return (
@@ -28,11 +27,11 @@ function App() {
             }
           />
           <Route
-            path="/clients"
+            path="/domains"
             element={
               <ProtectedRoute>
                 <Layout>
-                  <Clients />
+                  <Domains />
                 </Layout>
               </ProtectedRoute>
             }

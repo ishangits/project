@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { apiService } from '../services/api';
@@ -22,7 +23,7 @@ import {
   ArcElement,
   BarElement,
 } from 'chart.js';
-import { Line, Doughnut, Bar } from 'react-chartjs-2';
+import { Line, Doughnut } from 'react-chartjs-2';
 import { format, parseISO } from 'date-fns';
 
 ChartJS.register(
@@ -54,12 +55,12 @@ interface DashboardStats {
   totalTokens: number;
   totalCost: number;
   totalRequests: number;
-  dailyUsage: Array<{ _id: string; tokens: number; cost: number; requests: number }>;
-  usageByDomain: Array<{ tokens: number; cost: number; requests: number; domainName: string }>;
+  dailyUsage: Array<{ _id: string; tokens: number; cost: number; requests: number, day: string }>;
+  usageByDomain: Array<{ tokens: number; cost: number; requests: number; domain: {name: string} }>;
 }
 
 interface Domain {
-  _id: string;
+  id: string;
   name: string;
   url: string;
   kbSettings: {
@@ -98,8 +99,8 @@ const Dashboard: React.FC = () => {
         dailyUsage: tokenStats.dailyUsage || [],
         usageByDomain: tokenStats.usageByDomain || []
       });
-
       setDomains(domainsData.domains || []);
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -119,7 +120,7 @@ const Dashboard: React.FC = () => {
 
   // Prepare chart data
   const lineChartData = {
-    labels: stats.dailyUsage.map(item => safeFormatDate(item._id, 'MMM dd')),
+    labels: stats.dailyUsage.map(item => safeFormatDate(item.day, 'MMM dd')),
     datasets: [
       {
         label: 'Tokens Used',
@@ -132,7 +133,7 @@ const Dashboard: React.FC = () => {
   };
 
   const doughnutData = {
-    labels: stats.usageByDomain.map(item => item.domainName || 'Unknown'),
+    labels: stats.usageByDomain.map(item => item?.domain?.name || 'Unknown'),
     datasets: [
       {
         data: stats.usageByDomain.map(item => item.tokens),
@@ -275,7 +276,7 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Recent Domains</h3>
             <Link
-              to="/clients"
+              to="/domains"
               className="text-blue-600 hover:text-blue-700 text-sm font-medium"
             >
               View all
@@ -302,7 +303,7 @@ const Dashboard: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {domains.map((domain) => (
-                <tr key={domain._id ||  domain.name} className="hover:bg-gray-50">
+                <tr key={domain.id ||  domain.name} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-gray-900">

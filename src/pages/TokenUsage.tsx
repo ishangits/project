@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
@@ -37,6 +38,7 @@ ChartJS.register(
 );
 
 interface Domain {
+  id: string;
   _id: string;
   name: string;
   url: string;
@@ -44,8 +46,8 @@ interface Domain {
 }
 
 interface TokenLog {
-  _id: string;
-  domainId: {
+  id: string;
+  domain: {
     _id: string;
     name: string;
     url: string;
@@ -72,6 +74,7 @@ interface TokenStats {
   dailyUsage: Array<{
     _id: string;
     tokens: number;
+    day: string;
     cost: number;
     requests: number;
   }>;
@@ -80,6 +83,9 @@ interface TokenStats {
     tokens: number;
     cost: number;
     requests: number;
+     domain: {
+    name: string;
+  };
     domainName: string;
   }>;
 }
@@ -124,40 +130,42 @@ const TokenUsage: React.FC = () => {
     }
   };
 
-  const fetchTokenLogs = async (page = 1) => {
-    try {
-      setLoading(true);
-      const params: any = { page, limit: 10 };
-      if (selectedDomain) params.domainId = selectedDomain;
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
-      if (requestType) params.requestType = requestType;
+ const fetchTokenLogs = async (page = 1) => {
+  try {
+    setLoading(true);
+    const params: any = { page, limit: 10 };
+    if (selectedDomain) params.id = selectedDomain;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    if (requestType) params.requestType = requestType;
 
-      const response = await apiService.getTokenUsage(params);
-      setLogs(response.logs);
-      setTotalPages(response.totalPages);
-      setCurrentPage(response.currentPage);
-    } catch (error) {
-      console.error('Error fetching token logs:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const response = await apiService.getTokenUsage(params);
+    setLogs(response.logs);
+    setTotalPages(response.totalPages);
+    setCurrentPage(response.currentPage);
+  } catch (error) {
+    console.error('Error fetching token logs:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const fetchTokenStats = async () => {
-    try {
-      setStatsLoading(true);
-      const params: any = { days: 30 };
-      if (selectedDomain) params.domainId = selectedDomain;
+const fetchTokenStats = async () => {
+  try {
+    setStatsLoading(true);
+    const params: any = { days: 30 };
+    if (selectedDomain) params.id = selectedDomain;
 
-      const response = await apiService.getTokenStats(params);
-      setStats(response);
-    } catch (error) {
-      console.error('Error fetching token stats:', error);
-    } finally {
-      setStatsLoading(false);
-    }
-  };
+
+    const response = await apiService.getTokenStats(params);
+    setStats(response);
+  } catch (error) {
+    console.error('Error fetching token stats:', error);
+  } finally {
+    setStatsLoading(false);
+  }
+};
+
 
   useEffect(() => {
     fetchDomains();
@@ -178,7 +186,7 @@ const TokenUsage: React.FC = () => {
   const downloadReport = async (format: 'csv' | 'pdf') => {
     try {
       const params: any = {};
-      if (selectedDomain) params.domainId = selectedDomain;
+      if (selectedDomain) params.id = selectedDomain;
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
 
@@ -202,9 +210,11 @@ const TokenUsage: React.FC = () => {
     }
   };
 
+
+
   // Chart data
   const lineChartData = {
-    labels: stats.dailyUsage.map(item => safeFormatDate(item._id)),
+    labels: stats.dailyUsage.map(item => safeFormatDate(item?.day)),
     datasets: [
       {
         label: 'Tokens Used',
@@ -224,18 +234,19 @@ const TokenUsage: React.FC = () => {
     ],
   };
 
-  const barChartData = {
-    labels: stats.usageByDomain.map(item => item.domainName || 'Unknown'),
-    datasets: [
-      {
-        label: 'Tokens Used',
-        data: stats.usageByDomain.map(item => item.tokens),
-        backgroundColor: 'rgba(59, 130, 246, 0.6)',
-        borderColor: 'rgb(59, 130, 246)',
-        borderWidth: 1,
-      },
-    ],
-  };
+const barChartData = {
+  labels: stats.usageByDomain.map(item => item.domain.name || 'Unknown'),
+  datasets: [
+    {
+      label: 'Tokens Used',
+      data: stats.usageByDomain.map(item => item.tokens),
+      backgroundColor: 'rgba(59, 130, 246, 0.6)',
+      borderColor: 'rgb(59, 130, 246)',
+      borderWidth: 1,
+    },
+  ],
+};
+
 
   const chartOptions = {
     responsive: true,
@@ -402,11 +413,14 @@ const TokenUsage: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">All Domains</option>
-              {domains.map(domain => (
-                <option key={domain._id || domain.name} value={domain._id}>
-                  {domain.name}
-                </option>
-              ))}
+              {domains.map(domain => {
+  return (
+    <option key={domain.id} value={domain.id}>
+      {domain.name}
+    </option>
+  );
+})}
+
             </select>
           </div>
 
@@ -478,9 +492,9 @@ const TokenUsage: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {logs.map((log, idx) => (
-                <tr key={log._id || idx}>
+                <tr key={log.id || idx}>
                   <td className="px-4 py-2 text-sm text-gray-700">{safeFormatDate(log.date, 'MMM dd, yyyy')}</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{log.domainId?.name || 'Unknown'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700">{log.domain?.name || 'Unknown'}</td>
                   <td className="px-4 py-2 text-sm text-gray-700">{log.tokensUsed}</td>
                   <td className={`px-4 py-2 text-sm font-medium rounded-full w-max ${getRequestTypeColor(log.requestType)}`}>
                     {log.requestType || 'N/A'}

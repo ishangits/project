@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 
 interface Domain {
+  id: string;
   _id: string;
   name: string;
   url: string;
@@ -112,7 +113,7 @@ const Reports: React.FC = () => {
             >
               <option value="">All Domains</option>
               {domains.map((domain) => (
-                <option key={domain._id || domain.name} value={domain._id}>
+                <option key={domain.id || domain.name} value={domain.id}>
                   {domain.name}
                 </option>
               ))}

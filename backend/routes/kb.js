@@ -3,7 +3,6 @@ import multer from 'multer';
 import csv from 'csv-parser';
 import xlsx from 'xlsx';
 import fs from 'fs';
-import { Op } from 'sequelize';
 import KnowledgeBaseEntry from '../models/KnowledgeBaseEntry.js';
 import Domain from '../models/Domain.js';
 import { authenticateToken } from '../middleware/auth.js';
@@ -11,14 +10,15 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { normalizeEntry, insertOrUpdateEntries } from '../utils/kbHelper.js';
 
-
 const router = express.Router();
 
-// Multer setup (same as before)
+// Multer setup
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = 'uploads/';
-    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
@@ -26,169 +26,231 @@ const storage = multer.diskStorage({
     cb(null, file.fieldname + '-' + uniqueSuffix + '.' + file.originalname.split('.').pop());
   }
 });
+
 const upload = multer({ 
-  storage,
+  storage: storage,
   fileFilter: (req, file, cb) => {
-    const allowed = ['text/csv','application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
-    cb(null, allowed.includes(file.mimetype));
+    const allowedTypes = ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only CSV and Excel files are allowed.'), false);
+    }
   },
-  limits: { fileSize: 10 * 1024 * 1024 }
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
-// Get KB entries with pagination/search
+// ==================== GET KB ENTRIES ====================
 router.get('/:domainId', authenticateToken, async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '', type = '' } = req.query;
-    const offset = (page - 1) * limit;
+    const { domainId } = req.params;
 
-    const where = { domainId: req.params.domainId };
+    const where = { domainId };
+
     if (search) {
       where[Op.or] = [
         { question: { [Op.like]: `%${search}%` } },
         { answer: { [Op.like]: `%${search}%` } },
-        { content: { [Op.like]: `%${search}%` } }
+        { content: { [Op.like]: `%${search}%` } },
       ];
     }
-    if (type) where.type = type;
 
-    const { rows: entries, count: total } = await KnowledgeBaseEntry.findAndCountAll({
+    if (type) {
+      where.type = type;
+    }
+
+    const { count, rows } = await KnowledgeBaseEntry.findAndCountAll({
       where,
-      order: [['createdAt', 'DESC']],
+      order: [["createdAt", "DESC"]],
       limit: parseInt(limit),
-      offset: parseInt(offset),
+      offset: (page - 1) * limit,
     });
 
     res.json({
-      entries,
-      totalPages: Math.ceil(total / limit),
+      entries: rows,
+      totalPages: Math.ceil(count / limit),
       currentPage: parseInt(page),
-      total
+      total: count,
     });
   } catch (error) {
-    console.error('Get KB entries error:', error);
-    res.status(500).json({ message: 'Error fetching KB entries' });
+    console.error("Get KB entries error:", error);
+    res.status(500).json({ message: "Error fetching KB entries" });
   }
 });
 
-// Create manual KB entry
+// ==================== CREATE MANUAL KB ENTRY ====================
 router.post('/:domainId/manual', authenticateToken, async (req, res) => {
   try {
     const { question, answer, tags } = req.body;
-    if (!question || !answer) return res.status(400).json({ message: 'Question and answer are required' });
+    const { domainId } = req.params;
+
+    if (!question || !answer) {
+      return res.status(400).json({ message: "Question and answer are required" });
+    }
 
     const entry = await KnowledgeBaseEntry.create({
-      domainId: req.params.domainId,
-      type: 'manual',
+      domainId,
+      type: "manual",
       question,
       answer,
-      tags: tags ? tags.split(',').map(t => t.trim()) : []
+      tags: tags ? tags.split(",").map(tag => tag.trim()) : [],
     });
 
-    await Domain.update({ kbSettings: { lastUpdated: new Date() } }, { where: { id: req.params.domainId } });
+    // Update domain’s KB timestamp
+    await Domain.update(
+      { kbSettings: { lastUpdated: new Date() } },
+      { where: { id: domainId } }
+    );
 
     res.status(201).json(entry);
   } catch (error) {
-    console.error('Create manual KB entry error:', error);
-    res.status(500).json({ message: 'Error creating KB entry' });
+    console.error("Create manual KB entry error:", error);
+    res.status(500).json({ message: "Error creating KB entry" });
   }
 });
 
-// Upload KB file (CSV/Excel)
+// ==================== UPLOAD KB FILE ====================
 router.post('/:domainId/upload', authenticateToken, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-    const entries = [];
+
     const filePath = req.file.path;
     let entries = [];
 
-    const processRow = row => {
-      if (row.question && row.answer) {
-        entries.push({
-          domainId: req.params.domainId,
-          type: 'upload',
-          question: row.question,
-          answer: row.answer,
-          metadata: { filename: req.file.originalname, fileSize: req.file.size, uploadDate: new Date() }
-        });
-      }
-    };
+    const domainId = req.params.domainId;
+    const fileName = req.file.originalname;
 
+    // ---- CSV ----
     if (req.file.mimetype === 'text/csv') {
       const results = [];
       fs.createReadStream(filePath)
-        .pipe(csv())
+        .pipe(csv({ separator: '\t' }))
         .on('data', row => results.push(row))
         .on('end', async () => {
-          results.forEach(processRow);
-          await KnowledgeBaseEntry.bulkCreate(entries);
-          await Domain.update({ kbSettings: { lastUpdated: new Date() } }, { where: { id: req.params.domainId } });
-          fs.unlinkSync(filePath);
-          res.json({ message: `Uploaded ${entries.length} entries`, count: entries.length });
-        });
-    } else {
-      const workbook = xlsx.readFile(filePath);
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const data = xlsx.utils.sheet_to_json(sheet);
-      data.forEach(processRow);
-      await KnowledgeBaseEntry.bulkCreate(entries);
-      await Domain.update({ kbSettings: { lastUpdated: new Date() } }, { where: { id: req.params.domainId } });
-      fs.unlinkSync(filePath);
-      res.json({ message: `Uploaded ${entries.length} entries`, count: entries.length });
+          entries = results.map(row => normalizeEntry(row, req.file.originalname, req.params.domainId));
+          const count = await insertOrUpdateEntries(entries);
 
+const domain = await Domain.findByPk(req.params.domainId);
+if (!domain) return res.status(404).json({ message: 'Domain not found' });
+
+await Domain.update(
+  { kbSettings: { ...domain.kbSettings, lastUpdated: new Date() } },
+  { where: { id: req.params.domainId } }
+);  
+        fs.unlinkSync(filePath);
+          res.json({ message: `Uploaded ${count} entries from CSV`, count });
+        });
+
+    // ---- Excel ----
+    } else if (req.file.mimetype.includes('excel')) {
+      const workbook = xlsx.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+      entries = data.map(row => normalizeEntry(row, req.file.originalname, req.params.domainId));
+      const count = await insertOrUpdateEntries(entries);
+
+      await Domain.findByIdAndUpdate(req.params.domainId, { 'kbSettings.lastUpdated': new Date() });
+      fs.unlinkSync(filePath);
+      res.json({ message: `Uploaded ${count} entries from Excel`, count });
+
+    // ---- PDF ----
+    } else if (req.file.mimetype === 'application/pdf') {
+      const buffer = fs.readFileSync(filePath);
+      const data = await pdf(buffer);
+      const lines = data.text.split('\n').map(l => l.trim()).filter(Boolean);
+
+      entries = lines.map(line => {
+        const [question, answer] = line.split('\t'); // adapt separator
+        return { suburbname: question, postcode: '', response: answer };
+      }).map(row => normalizeEntry(row, req.file.originalname, req.params.domainId));
+
+      const count = await insertOrUpdateEntries(entries);
+
+      await Domain.findByIdAndUpdate(req.params.domainId, { 'kbSettings.lastUpdated': new Date() });
+      fs.unlinkSync(filePath);
+      res.json({ message: `Uploaded ${count} entries from PDF`, count });
     }
 
   } catch (error) {
     console.error('Upload KB file error:', error);
     if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    res.status(500).json({ message: 'Error processing uploaded file' });
-
+    res.status(500).json({ message: 'Error processing uploaded file', error: error.message });
   }
 });
 
 
 // Delete KB entry
+// Delete KB entry
 router.delete('/:domainId/entries/:entryId', authenticateToken, async (req, res) => {
   try {
+    const { domainId, entryId } = req.params;
+
     const deleted = await KnowledgeBaseEntry.destroy({
-      where: { id: req.params.entryId, domainId: req.params.domainId }
+      where: { id: entryId, domainId }
     });
-    if (!deleted) return res.status(404).json({ message: 'KB entry not found' });
-    res.json({ message: 'KB entry deleted successfully' });
+
+    if (!deleted) {
+      return res.status(404).json({ message: "KB entry not found" });
+    }
+
+    res.json({ message: "KB entry deleted successfully" });
   } catch (error) {
-    console.error('Delete KB entry error:', error);
-    res.status(500).json({ message: 'Error deleting KB entry' });
+    console.error("Delete KB entry error:", error);
+    res.status(500).json({ message: "Error deleting KB entry" });
   }
 });
+
+
+// Crawl domain (placeholder)
+
 
 // Crawl domain
 router.post('/:domainId/crawl', authenticateToken, async (req, res) => {
   try {
-    const domain = await Domain.findByPk(req.params.domainId);
-    if (!domain) return res.status(404).json({ message: 'Domain not found' });
-    if (!domain.url) return res.status(400).json({ message: 'Domain URL is empty' });
+    const { domainId } = req.params;
+    const domain = await Domain.findByPk(domainId);
+    if (!domain) {
+      return res.status(404).json({ message: "Domain not found" });
+    }
 
-    const response = await axios.get(domain.url);
+    const url = domain.url;
+    if (!url) {
+      return res.status(400).json({ message: "Domain URL is empty" });
+    }
+
+    const response = await axios.get(url);
     const $ = cheerio.load(response.data);
     const entries = [];
 
     $('h1,h2,h3,p').each((i, el) => {
       const text = $(el).text().trim();
-      if (text.length > 20) entries.push({
-        domainId: domain.id,
-        type: 'crawled',
-        content: text,
-        metadata: { url: domain.url, crawlDate: new Date() }
-      });
+      if (text.length > 20) {
+        entries.push({
+          domainId,
+          type: "crawled",
+          content: text,
+          metadata: { url, crawlDate: new Date() },
+        });
+      }
     });
 
-    if (entries.length > 0) await KnowledgeBaseEntry.bulkCreate(entries);
-    await Domain.update({ kbSettings: { lastUpdated: new Date() } }, { where: { id: domain.id } });
+    if (entries.length > 0) {
+      await KnowledgeBaseEntry.bulkCreate(entries);
+    }
 
-    res.json({ message: `Crawl completed, ${entries.length} entries added.`, count: entries.length });
+    await Domain.update(
+      { kbSettings: { lastUpdated: new Date() } },
+      { where: { id: domainId } }
+    );
+
+    res.json({ message: `Crawl completed. ${entries.length} entries added.`, count: entries.length });
   } catch (error) {
-    console.error('Crawl domain error:', error);
-    res.status(500).json({ message: 'Error crawling domain', error: error.message });
+    console.error("Crawl domain error:", error);
+    res.status(500).json({ message: "Error crawling domain", error: error.message });
   }
 });
+
+
 
 export default router;

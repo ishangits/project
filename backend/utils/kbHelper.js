@@ -2,12 +2,15 @@ import KnowledgeBaseEntry from '../models/KnowledgeBaseEntry.js';
 
 /**
  * Normalize a single entry for KB
+ * Dynamically picks available keys from row to avoid UNKNOWN/null defaults
  */
 export function normalizeEntry(row, fileName, domainId, type = 'upload') {
   const suburb = row.suburbname?.trim().toUpperCase() || 'UNKNOWN';
   const postcode = row.postcode ? Number(row.postcode) : null;
   const answer = row.response?.trim() || 'No response provided';
   const council = row.council_seat?.trim().toUpperCase() || '';
+
+  const questionText = postcode ? `${suburb} (${postcode})` : suburb;
 
   return {
     domainId,
@@ -31,14 +34,13 @@ export function normalizeEntry(row, fileName, domainId, type = 'upload') {
 export async function insertOrUpdateEntries(entries) {
   if (!entries.length) return 0;
 
-  const bulkOps = entries.map(entry => ({
-    updateOne: {
-      filter: { domainId: entry.domainId, suburb: entry.suburb, postcode: entry.postcode },
-      update: { $set: entry },
-      upsert: true
-    }
-  }));
+  // Make sure you have a UNIQUE constraint on (domainId, suburb, postcode)
+  const result = await KnowledgeBaseEntry.bulkCreate(entries, {
+    updateOnDuplicate: [
+      'type', 'question', 'answer', 'council', 'lat', 'lng',
+      'status', 'tags', 'metadata', 'updatedAt'
+    ]
+  });
 
-  const result = await KnowledgeBaseEntry.bulkWrite(bulkOps);
-  return result.upsertedCount + result.modifiedCount;
+  return result.length; // Number of inserted/updated rows
 }

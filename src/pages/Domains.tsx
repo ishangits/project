@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect } from 'react';
-import { apiService } from '../services/api';
+import React, { useState, useEffect } from "react";
+import { apiService } from "../services/api";
 import {
   Plus,
   Search,
@@ -11,17 +11,22 @@ import {
   Calendar,
   RefreshCw,
   Eye,
-  DollarSign
-} from 'lucide-react';
+  DollarSign,
+} from "lucide-react";
 
 interface Domain {
+  id: string;
   openAIKey: string;
-  _id: string;
   name: string;
   url: string;
   domainId: string;
   apiEndpoint: string;
   authToken: string;
+  dbHost: string;
+  dbPort: string;
+  dbUser: string;
+  dbPassword: string;
+  dbDatabase: string;
   kbSettings: {
     lastUpdated: string | null;
     autoUpdate: boolean;
@@ -30,10 +35,10 @@ interface Domain {
   createdAt: string;
 }
 
-const Clients: React.FC = () => {
+const Domains: React.FC = () => {
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showModal, setShowModal] = useState(false);
@@ -47,33 +52,38 @@ const Clients: React.FC = () => {
   const [invoiceTotalPages, setInvoiceTotalPages] = useState(1);
   const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false);
   const [invoiceFormData, setInvoiceFormData] = useState({
-    amount: '',
-    currency: 'USD',
-    description: '',
-    dueDate: ''
+    amount: "",
+    currency: "USD",
+    description: "",
+    dueDate: "",
   });
   const [formData, setFormData] = useState({
-    name: '',
-    url: '',
-    openAIKey: "" ,
-    status: 'active'
+    name: "",
+    url: "",
+    openAIKey: "",
+    dbHost: "",
+    dbPort: "",
+    dbUser: "",
+    dbPassword: "",
+    dbDatabase: "",
+    status: "active",
   });
 
-  const fetchDomains = async (page = 1, search = '') => {
+  const fetchDomains = async (page = 1, search = "") => {
     try {
       setLoading(true);
       const response = await apiService.getDomains({
         page,
         limit: 10,
         search,
-        sortBy: 'createdAt',
-        sortOrder: 'desc'
+        sortBy: "createdAt",
+        sortOrder: "desc",
       });
       setDomains(response.domains);
       setTotalPages(response.totalPages);
       setCurrentPage(response.currentPage);
     } catch (error) {
-      console.error('Error fetching domains:', error);
+      console.error("Error fetching domains:", error);
     } finally {
       setLoading(false);
     }
@@ -92,16 +102,26 @@ const Clients: React.FC = () => {
     e.preventDefault();
     try {
       if (editingDomain) {
-        await apiService.updateDomain(editingDomain._id, formData);
+        await apiService.updateDomain(editingDomain.id, formData);
       } else {
         await apiService.createDomain(formData);
       }
       setShowModal(false);
       setEditingDomain(null);
-      setFormData({ name: '', url: '',openAIKey: "", status: 'active' });
+      setFormData({
+        name: "",
+        url: "",
+        openAIKey: "",
+        dbHost: "",
+        dbPort: "",
+        dbUser: "",
+        dbPassword: "",
+        dbDatabase: "",
+        status: "active",
+      });
       fetchDomains(currentPage, searchTerm);
     } catch (error) {
-      console.error('Error saving domain:', error);
+      console.error("Error saving domain:", error);
     }
   };
 
@@ -111,18 +131,23 @@ const Clients: React.FC = () => {
       name: domain.name,
       url: domain.url,
       status: domain.status,
-      openAIKey: domain.openAIKey
+      openAIKey: domain.openAIKey,
+      dbHost: domain.dbHost || "",
+      dbPort: domain.dbPort || "",
+      dbUser: domain.dbUser || "",
+      dbPassword: domain.dbPassword || "",
+      dbDatabase: domain.dbDatabase || "",
     });
     setShowModal(true);
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this domain?')) {
+    if (window.confirm("Are you sure you want to delete this domain?")) {
       try {
         await apiService.deleteDomain(id);
         fetchDomains(currentPage, searchTerm);
       } catch (error) {
-        console.error('Error deleting domain:', error);
+        console.error("Error deleting domain:", error);
       }
     }
   };
@@ -132,13 +157,23 @@ const Clients: React.FC = () => {
       await apiService.updateDomainKB(id);
       fetchDomains(currentPage, searchTerm);
     } catch (error) {
-      console.error('Error updating KB:', error);
+      console.error("Error updating KB:", error);
     }
   };
 
   const openModal = () => {
     setEditingDomain(null);
-    setFormData({ name: '', url: '',openAIKey: "", status: 'active' });
+    setFormData({
+      name: "",
+      url: "",
+      openAIKey: "",
+      dbHost: "",
+      dbUser: "",
+      dbPort: "",
+      dbPassword: "",
+      dbDatabase: "",
+      status: "active",
+    });
     setShowModal(true);
   };
 
@@ -147,26 +182,20 @@ const Clients: React.FC = () => {
     setShowTokenModal(true);
   };
 
-  const showInvoices = async (domain: Domain) => {
-    setSelectedDomain(domain);
-    setShowInvoicesModal(true);
-    await fetchInvoices(domain._id, 1);
-  };
-
   const fetchInvoices = async (domainId: string, page = 1) => {
     try {
       setInvoicesLoading(true);
       const response = await apiService.getClientInvoices(domainId, {
         page,
         limit: 5,
-        sortBy: 'createdAt',
-        sortOrder: 'desc'
+        sortBy: "createdAt",
+        sortOrder: "desc",
       });
       setInvoices(response.invoices);
       setInvoiceTotalPages(response.totalPages);
       setInvoicePage(response.currentPage);
     } catch (error) {
-      console.error('Error fetching invoices:', error);
+      console.error("Error fetching invoices:", error);
     } finally {
       setInvoicesLoading(false);
     }
@@ -180,44 +209,53 @@ const Clients: React.FC = () => {
       const invoiceData = {
         amount: parseFloat(invoiceFormData.amount),
         currency: invoiceFormData.currency,
-        description: invoiceFormData.description || `Invoice for ${selectedDomain.name}`,
-        dueDate: invoiceFormData.dueDate || undefined
+        description:
+          invoiceFormData.description || `Invoice for ${selectedDomain.name}`,
+        dueDate: invoiceFormData.dueDate || undefined,
       };
 
-      await apiService.createInvoice(selectedDomain._id, invoiceData);
+      await apiService.createInvoice(selectedDomain.id, invoiceData);
       setShowCreateInvoiceModal(false);
-      setInvoiceFormData({ amount: '', currency: 'USD', description: '', dueDate: '' });
-      await fetchInvoices(selectedDomain._id, invoicePage);
+      setInvoiceFormData({
+        amount: "",
+        currency: "USD",
+        description: "",
+        dueDate: "",
+      });
+      await fetchInvoices(selectedDomain.id, invoicePage);
     } catch (error) {
-      console.error('Error creating invoice:', error);
-      alert('Error creating invoice. Please try again.');
+      console.error("Error creating invoice:", error);
+      alert("Error creating invoice. Please try again.");
     }
   };
 
-  const handleUpdateInvoiceStatus = async (invoiceId: string, status: string) => {
+  const handleUpdateInvoiceStatus = async (
+    invoiceId: string,
+    status: string
+  ) => {
     try {
       await apiService.updateInvoiceStatus(invoiceId, { status });
       if (selectedDomain) {
-        await fetchInvoices(selectedDomain._id, invoicePage);
+        await fetchInvoices(selectedDomain.id, invoicePage);
       }
     } catch (error) {
-      console.error('Error updating invoice status:', error);
-      alert('Error updating invoice status. Please try again.');
+      console.error("Error updating invoice status:", error);
+      alert("Error updating invoice status. Please try again.");
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'paid':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'failed':
-        return 'bg-red-100 text-red-800';
-      case 'cancelled':
-        return 'bg-gray-100 text-gray-800';
+      case "paid":
+        return "bg-green-100 text-green-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "failed":
+        return "bg-red-100 text-red-800";
+      case "cancelled":
+        return "bg-gray-100 text-gray-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -229,7 +267,7 @@ const Clients: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Client Domains</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Domains</h1>
         <button
           onClick={openModal}
           className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -292,7 +330,10 @@ const Clients: React.FC = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {domains.map((domain) => (
-                    <tr key={domain._id || domain.name} className="hover:bg-gray-50">
+                    <tr
+                      key={domain.id || domain.name}
+                      className="hover:bg-gray-50"
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
@@ -308,20 +349,20 @@ const Clients: React.FC = () => {
                               <ExternalLink className="h-3 w-3 mr-1" />
                               {domain.url}
                             </div>
-                            <div className="text-xs text-gray-400">
-                              ID: {domain.domainId}
-                            </div>
+                            {/* <div className="text-xs text-gray-400">
+                              ID: {domain.id}
+                            </div> */}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            domain.status === 'active'
-                              ? 'bg-green-100 text-green-800'
-                              : domain.status === 'inactive'
-                              ? 'bg-gray-100 text-gray-800'
-                              : 'bg-red-100 text-red-800'
+                            domain.status === "active"
+                              ? "bg-green-100 text-green-800"
+                              : domain.status === "inactive"
+                              ? "bg-gray-100 text-gray-800"
+                              : "bg-red-100 text-red-800"
                           }`}
                         >
                           {domain.status}
@@ -332,11 +373,13 @@ const Clients: React.FC = () => {
                           <div className="flex items-center mb-1">
                             <Calendar className="h-4 w-4 mr-1" />
                             {domain.kbSettings.lastUpdated
-                              ? new Date(domain.kbSettings.lastUpdated).toLocaleDateString()
-                              : 'Never'}
+                              ? new Date(
+                                  domain.kbSettings.lastUpdated
+                                ).toLocaleDateString()
+                              : "Never"}
                           </div>
                           <button
-                            onClick={() => handleKBUpdate(domain._id)}
+                            onClick={() => handleKBUpdate(domain.id)}
                             className="inline-flex items-center text-xs text-blue-600 hover:text-blue-700"
                           >
                             <RefreshCw className="h-3 w-3 mr-1" />
@@ -356,13 +399,13 @@ const Clients: React.FC = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button
+                          {/* <button
                             onClick={() => showInvoices(domain)}
                             className="text-purple-600 hover:text-purple-900"
                             title="View Invoices"
                           >
                             <DollarSign className="h-4 w-4" />
-                          </button>
+                          </button> */}
                           <button
                             onClick={() => handleEdit(domain)}
                             className="text-indigo-600 hover:text-indigo-900"
@@ -371,7 +414,7 @@ const Clients: React.FC = () => {
                             <Edit3 className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => handleDelete(domain._id)}
+                            onClick={() => handleDelete(domain.id)}
                             className="text-red-600 hover:text-red-900"
                             title="Delete Domain"
                           >
@@ -418,9 +461,9 @@ const Clients: React.FC = () => {
       {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+          <div className="relative top-20 mx-auto p-5 border w-[650px] shadow-lg rounded-md bg-white">
             <h3 className="text-lg font-bold text-gray-900 mb-4">
-              {editingDomain ? 'Edit Domain' : 'Add New Domain'}
+              {editingDomain ? "Edit Domain" : "Add New Domain"}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -431,7 +474,9 @@ const Clients: React.FC = () => {
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter name"
                 />
@@ -444,39 +489,123 @@ const Clients: React.FC = () => {
                   type="url"
                   required
                   value={formData.url}
-                  onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, url: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="https://example.com"
                 />
               </div>
               <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  openAI Key
-                </label>
-                      <input
-  type="text"
-  placeholder="OpenAI Key"
-  value={formData.openAIKey}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    OpenAI Key
+  </label>
+  <input
+    type="text"
+    placeholder="Enter OpenAI Key"
+    value={formData.openAIKey}
+    onChange={(e) => setFormData({ ...formData, openAIKey: e.target.value })}
+    className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-600 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300"
+  />
+</div>
+             <div className="border-t pt-4 mt-4">
+  <h4 className="text-sm font-medium text-gray-500 mb-3">
+    Database Connection Info
+  </h4>
 
-  onChange={(e) => setFormData({ ...formData, openAIKey: e.target.value })}
-/>
-              </div>
-        
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="suspended">Suspended</option>
-                </select>
-              </div>
+  <div className="grid grid-cols-2 gap-4">
+    {/* Database Host */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Database Host
+      </label>
+      <input
+        type="text"
+        value={formData.dbHost}
+        onChange={(e) => setFormData({ ...formData, dbHost: e.target.value })}
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        placeholder="localhost"
+      />
+    </div>
+
+    {/* Database User */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Database User
+      </label>
+      <input
+        type="text"
+        value={formData.dbUser}
+        onChange={(e) => setFormData({ ...formData, dbUser: e.target.value })}
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        placeholder="username"
+      />
+    </div>
+
+    {/* Database Password */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Database Password
+      </label>
+      <input
+        type="password"
+        value={formData.dbPassword}
+        onChange={(e) =>
+          setFormData({ ...formData, dbPassword: e.target.value })
+        }
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        placeholder="••••••••"
+      />
+    </div>
+
+    {/* Database Name */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Database Name
+      </label>
+      <input
+        type="text"
+        value={formData.dbDatabase}
+        onChange={(e) =>
+          setFormData({ ...formData, dbDatabase: e.target.value })
+        }
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        placeholder="database_name"
+      />
+    </div>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Database Port
+      </label>
+      <input
+        type="text"
+        value={formData.dbPort}
+        onChange={(e) =>
+          setFormData({ ...formData, dbPort: e.target.value })
+        }
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        placeholder="Port"
+      />
+    </div>
+  </div>
+</div>
+
+{/* Status below DB Info */}
+<div className="mt-4">
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Status
+  </label>
+  <select
+    value={formData.status}
+    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+  >
+    <option value="active">Active</option>
+    <option value="inactive">Inactive</option>
+    <option value="suspended">Suspended</option>
+  </select>
+</div>
+
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
@@ -489,7 +618,7 @@ const Clients: React.FC = () => {
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
-                  {editingDomain ? 'Update' : 'Create'}
+                  {editingDomain ? "Update" : "Create"}
                 </button>
               </div>
             </form>
@@ -543,10 +672,10 @@ const Clients: React.FC = () => {
                 </label>
                 <div className="flex items-center space-x-2">
                   <code className="flex-1 p-2 bg-gray-100 rounded text-sm font-mono">
-                    {selectedDomain.domainId}
+                    {selectedDomain.id}
                   </code>
                   <button
-                    onClick={() => copyToClipboard(selectedDomain.domainId)}
+                    onClick={() => copyToClipboard(selectedDomain.id)}
                     className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
                   >
                     Copy
@@ -554,7 +683,7 @@ const Clients: React.FC = () => {
                 </div>
               </div>
             </div>
-             <div className="flex justify-end pt-4">
+            <div className="flex justify-end pt-4">
               <button
                 onClick={() => setShowTokenModal(false)}
                 className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
@@ -589,7 +718,7 @@ const Clients: React.FC = () => {
                 </button>
               </div>
             </div>
-            
+
             {invoicesLoading ? (
               <div className="flex items-center justify-center h-32">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -625,7 +754,7 @@ const Clients: React.FC = () => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {invoices.map((invoice) => (
-                        <tr key={invoice._id} className="hover:bg-gray-50">
+                        <tr key={invoice.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {invoice.invoiceId}
                           </td>
@@ -637,7 +766,9 @@ const Clients: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span
-                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(invoice.status)}`}
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                                invoice.status
+                              )}`}
                             >
                               {invoice.status}
                             </span>
@@ -650,25 +781,40 @@ const Clients: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div className="flex items-center space-x-2">
-                              {invoice.status === 'pending' && (
+                              {invoice.status === "pending" && (
                                 <>
                                   <button
-                                    onClick={() => handleUpdateInvoiceStatus(invoice._id, 'paid')}
+                                    onClick={() =>
+                                      handleUpdateInvoiceStatus(
+                                        invoice.id,
+                                        "paid"
+                                      )
+                                    }
                                     className="text-green-600 hover:text-green-900 text-xs px-2 py-1 border border-green-600 rounded"
                                   >
                                     Mark Paid
                                   </button>
                                   <button
-                                    onClick={() => handleUpdateInvoiceStatus(invoice._id, 'failed')}
+                                    onClick={() =>
+                                      handleUpdateInvoiceStatus(
+                                        invoice.id,
+                                        "failed"
+                                      )
+                                    }
                                     className="text-red-600 hover:text-red-900 text-xs px-2 py-1 border border-red-600 rounded"
                                   >
                                     Mark Failed
                                   </button>
                                 </>
                               )}
-                              {invoice.status === 'failed' && (
+                              {invoice.status === "failed" && (
                                 <button
-                                  onClick={() => handleUpdateInvoiceStatus(invoice._id, 'pending')}
+                                  onClick={() =>
+                                    handleUpdateInvoiceStatus(
+                                      invoice.id,
+                                      "pending"
+                                    )
+                                  }
                                   className="text-yellow-600 hover:text-yellow-900 text-xs px-2 py-1 border border-yellow-600 rounded"
                                 >
                                   Mark Pending
@@ -685,7 +831,9 @@ const Clients: React.FC = () => {
                 {invoices.length === 0 && (
                   <div className="text-center py-8">
                     <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">No invoices found for this client</p>
+                    <p className="text-gray-500">
+                      No invoices found for this client
+                    </p>
                   </div>
                 )}
 
@@ -701,7 +849,7 @@ const Clients: React.FC = () => {
                           onClick={() => {
                             const newPage = invoicePage - 1;
                             setInvoicePage(newPage);
-                            fetchInvoices(selectedDomain._id, newPage);
+                            fetchInvoices(selectedDomain.id, newPage);
                           }}
                           disabled={invoicePage === 1}
                           className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
@@ -712,7 +860,7 @@ const Clients: React.FC = () => {
                           onClick={() => {
                             const newPage = invoicePage + 1;
                             setInvoicePage(newPage);
-                            fetchInvoices(selectedDomain._id, newPage);
+                            fetchInvoices(selectedDomain.id, newPage);
                           }}
                           disabled={invoicePage === invoiceTotalPages}
                           className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
@@ -747,7 +895,12 @@ const Clients: React.FC = () => {
                   min="0"
                   required
                   value={invoiceFormData.amount}
-                  onChange={(e) => setInvoiceFormData({ ...invoiceFormData, amount: e.target.value })}
+                  onChange={(e) =>
+                    setInvoiceFormData({
+                      ...invoiceFormData,
+                      amount: e.target.value,
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="0.00"
                 />
@@ -758,7 +911,12 @@ const Clients: React.FC = () => {
                 </label>
                 <select
                   value={invoiceFormData.currency}
-                  onChange={(e) => setInvoiceFormData({ ...invoiceFormData, currency: e.target.value })}
+                  onChange={(e) =>
+                    setInvoiceFormData({
+                      ...invoiceFormData,
+                      currency: e.target.value,
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="USD">USD</option>
@@ -775,7 +933,12 @@ const Clients: React.FC = () => {
                 <textarea
                   rows={3}
                   value={invoiceFormData.description}
-                  onChange={(e) => setInvoiceFormData({ ...invoiceFormData, description: e.target.value })}
+                  onChange={(e) =>
+                    setInvoiceFormData({
+                      ...invoiceFormData,
+                      description: e.target.value,
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder={`Invoice for ${selectedDomain.name}`}
                 />
@@ -787,7 +950,12 @@ const Clients: React.FC = () => {
                 <input
                   type="date"
                   value={invoiceFormData.dueDate}
-                  onChange={(e) => setInvoiceFormData({ ...invoiceFormData, dueDate: e.target.value })}
+                  onChange={(e) =>
+                    setInvoiceFormData({
+                      ...invoiceFormData,
+                      dueDate: e.target.value,
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">
@@ -817,4 +985,4 @@ const Clients: React.FC = () => {
   );
 };
 
-export default Clients;
+export default Domains;
