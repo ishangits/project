@@ -1,295 +1,240 @@
 # AI Chatbot Admin Panel
+A production-ready full‑stack web application for managing AI chatbots, **domains (formerly “clients”)**, knowledge bases, and token usage analytics — now backed by **MySQL + Sequelize**.
 
-A complete, production-ready full-stack web application for managing AI chatbots, domains, knowledge bases, and token usage analytics.
+---
 
 ## 🚀 Tech Stack
 
 ### Frontend
-- **React** (with Vite) - Modern React development
-- **TypeScript** - Type safety and better developer experience
-- **Tailwind CSS** - Utility-first CSS framework
-- **React Router DOM** - Client-side routing
-- **Axios** - HTTP client for API calls
-- **Chart.js** - Interactive charts and analytics
-- **Lucide React** - Beautiful icons
-- **Date-fns** - Date manipulation utilities
+
+* **React** (Vite)
+* **TypeScript**
+* **Tailwind CSS**
+* **React Router DOM**
+* **Axios**
+* **Chart.js**
+* **Lucide React**
+* **date-fns**
 
 ### Backend
-- **Node.js** - JavaScript runtime
-- **Express.js** - Web framework
-- **MongoDB** - NoSQL database
-- **Mongoose** - MongoDB object modeling
-- **JWT** - JSON Web Tokens for authentication
-- **bcryptjs** - Password hashing
-- **Multer** - File upload handling
-- **CSV Parser** - CSV file processing
-- **XLSX** - Excel file processing
-- **jsPDF** - PDF generation
+
+* **Node.js** + **Express.js**
+* **MySQL** (InnoDB)
+* **Sequelize** ORM (migrations & seeders)
+* **JWT** for authentication
+* **bcryptjs** for password hashing
+* **Multer** for file uploads
+* **csv-parse** (CSV) & **xlsx** (Excel)
+* **jsPDF** for PDF generation
+
+> **What changed?** We replaced MongoDB/Mongoose with **MySQL/Sequelize** and renamed the **Clients** module to **Domains**. Crawling is **removed**.
+
+---
 
 ## 📋 Features
 
 ### 🔐 Admin Authentication
-- Secure JWT-based authentication
-- Protected routes for admin-only access
-- Login/logout functionality
-- Token verification and refresh
+
+* Secure JWT-based auth
+* Protected routes (admin-only)
+* Login/logout & token verification
 
 ### 📊 Dashboard
-- Overview of all domains and statistics
-- Token usage analytics with interactive charts
-- Recent activity monitoring
-- Quick access to key metrics
 
-### 🌐 Domain Management (CRUD)
-- Add, edit, and delete client domains
-- Automatic API endpoint generation
-- Secure auth token creation
-- Domain status management
-- Bulk operations and search
+* Overview cards for domains and usage
+* Token usage analytics with interactive charts
+* Recent activity
 
-### 📚 Knowledge Base Management
-- Upload FAQ files (CSV, Excel)
-- Manual KB entry creation
-- Domain crawling capabilities
-- KB update tracking
-- Content search and filtering
+### 🌐 Domain Management (formerly Clients)
+
+* Add, edit, delete **domains**
+* Auto-generate API endpoint & auth token
+* Status management (active/inactive/suspended)
+* Search, filter, and pagination
+* **NEW:** Domain form now captures **external database connection info**:
+
+  * Hostname
+  * Port
+  * Username
+  * Password (securely encrypted at rest)
+  * Database name
+  * Table name
+
+### 📚 Knowledge Base Management (No Crawling)
+
+* Upload FAQ content via **CSV/Excel**
+* Create **manual** entries
+* Track updates (timestamps, author)
+* Search & filtering
 
 ### 📈 Token Usage Analytics
-- Real-time token consumption tracking
-- Cost calculation and reporting
-- Interactive charts and trends
-- Domain-wise usage breakdown
-- Export capabilities
+
+* Track token consumption per domain
+* Automatic cost calculation (per 1K tokens)
+* Charts & trends
+* Exportable reports
 
 ### 📄 Reports & Billing
-- Generate CSV and PDF reports
-- Customizable date ranges
-- Domain-specific reporting
-- Usage analytics export
-- Invoice generation (placeholder)
+
+* CSV & PDF exports
+* Custom date ranges & per-domain reports
+* Invoice generation (placeholder)
+
+---
 
 ## 🛠️ Installation & Setup
 
 ### Prerequisites
-- Node.js (v16 or higher)
-- MongoDB (local or cloud instance)
-- npm or yarn
 
-### 1. Clone the Repository
+* Node.js (v18+ recommended)
+* **MySQL 8+** (or compatible)
+* npm or yarn
+
+### 1) Clone the Repository
+
 ```bash
 git clone <repository-url>
 cd ai-chatbot-admin-panel
 ```
 
-### 2. Install Dependencies
+### 2) Install Dependencies
 
-#### Frontend Dependencies
 ```bash
+# Frontend
+npm install
+
+# Backend
+cd backend
 npm install
 ```
+### 3) Initialize Database (MySQL)
 
-#### Backend Dependencies
+Create the database and run migrations/seeders with Sequelize CLI:
+
 ```bash
 cd backend
-npm install
+npx sequelize-cli db:create
+npx sequelize-cli db:migrate
+npx sequelize-cli db:seed:all
 ```
 
-### 3. Environment Configuration
+The seeders create:
 
-Create a `.env` file in the `backend` directory:
-```env
-# MongoDB Connection
-MONGODB_URI=mongodb://localhost:27017/chatbot_admin
+* Admin user (`admin@chatbot.com` / `admin123`)
+* Sample **domains** (renamed from clients)
+* Sample knowledge base entries
+* Token usage logs
 
-# JWT Secret
-JWT_SECRET=your_super_secure_jwt_secret_key_here
+> Passwords in domain DB configs are encrypted at rest using AES‑256‑CBC with `DB_ENCRYPTION_KEY`.
 
-# Server Port
-PORT=5000
+### 4) Start the App
 
-# Admin Credentials for Seed
-ADMIN_EMAIL=admin@chatbot.com
-ADMIN_PASSWORD=admin123
-
-# Token Cost (per 1000 tokens)
-TOKEN_COST_PER_1K=0.002
-```
-
-### 4. Database Setup
-
-#### Start MongoDB (if running locally)
 ```bash
-mongod
-```
-
-#### Seed Initial Data
-```bash
+# Backend
 cd backend
-npm run seed
+npm start    # http://localhost:5000
+
+# Frontend (in project root)
+npm run dev  # http://localhost:5173
 ```
-
-This creates:
-- An admin user (admin@chatbot.com / admin123)
-- Sample domains
-- Sample knowledge base entries
-- Token usage logs for testing
-
-### 5. Start the Application
-
-#### Terminal 1: Start Backend Server
-```bash
-cd backend
-npm start
-```
-Backend runs on `http://localhost:5000`
-
-#### Terminal 2: Start Frontend Development Server
-```bash
-npm run dev
-```
-Frontend runs on `http://localhost:5173`
-
-## 📱 Usage
 
 ### Admin Login
-- Navigate to `http://localhost:5173`
-- Use credentials: `admin@chatbot.com` / `admin123`
 
-### Main Features
-1. **Dashboard** - View overview and analytics
-2. **Clients** - Manage domains and their settings
-3. **Knowledge Base** - Upload and manage content
-4. **Token Usage** - Monitor usage and costs
-5. **Reports** - Generate and download reports
+* Visit `http://localhost:5173`
+* Credentials: `admin@chatbot.com` / `admin123`
 
-## 🏗️ Project Structure
+### Main Sections
 
-```
-ai-chatbot-admin-panel/
-├── backend/                    # Backend Express.js application
-│   ├── config/                # Database configuration
-│   ├── middleware/            # Authentication middleware
-│   ├── models/               # MongoDB/Mongoose models
-│   ├── routes/               # API routes
-│   ├── uploads/              # File upload directory
-│   ├── temp/                 # Temporary files for reports
-│   ├── server.js             # Express server entry point
-│   ├── seed.js              # Database seeding script
-│   └── package.json         # Backend dependencies
-├── src/                      # Frontend React application
-│   ├── components/          # Reusable UI components
-│   ├── context/            # React context (Auth)
-│   ├── pages/              # Page components
-│   ├── services/           # API service layer
-│   ├── App.tsx            # Main App component
-│   └── main.tsx           # React entry point
-├── public/                 # Static assets
-├── package.json           # Frontend dependencies
-├── tailwind.config.js     # Tailwind CSS configuration
-├── vite.config.ts         # Vite configuration
-└── README.md             # This file
-```
+1. **Dashboard** – overview & charts
+2. **Domains** – manage domain records & DB connection info
+3. **Knowledge Base** – manual entries & CSV/Excel upload (no crawling)
+4. **Token Usage** – usage & cost analytics
+5. **Reports** – CSV/PDF exports & (placeholder) invoices
 
-## 🔌 API Endpoints
 
-### Authentication
-- `POST /api/auth/login` - Admin login
-- `GET /api/auth/verify` - Verify JWT token
-- `POST /api/auth/logout` - Admin logout
 
-### Domains
-- `GET /api/domains` - List all domains
-- `POST /api/domains` - Create new domain
-- `GET /api/domains/:id` - Get domain details
-- `PUT /api/domains/:id` - Update domain
-- `DELETE /api/domains/:id` - Delete domain
 
-### Knowledge Base
-- `GET /api/kb/:domainId` - Get KB entries
-- `POST /api/kb/:domainId/manual` - Add manual entry
-- `POST /api/kb/:domainId/upload` - Upload KB file
-- `DELETE /api/kb/:domainId/entries/:entryId` - Delete entry
 
-### Token Usage
-- `GET /api/tokens` - Get token usage logs
-- `GET /api/tokens/stats` - Get usage statistics
-- `POST /api/tokens` - Create usage log
 
-### Reports
-- `GET /api/reports/csv` - Download CSV report
-- `GET /api/reports/pdf` - Download PDF report
-- `POST /api/reports/invoice` - Generate invoice
+## 🛡️ Security
 
-## 🛡️ Security Features
+* JWT auth & route guards
+* `bcryptjs` password hashing
+* CORS configured
+* Input validation
+* File-type/size checks on uploads
+* **Encrypted domain DB passwords** (AES‑256‑CBC with IV)
 
-- **JWT Authentication** - Secure token-based auth
-- **Password Hashing** - bcrypt for secure password storage
-- **Route Protection** - Middleware for admin-only routes
-- **CORS Configuration** - Proper cross-origin setup
-- **Input Validation** - Server-side validation
-- **File Upload Security** - Type and size restrictions
+---
 
-## 🎨 UI/UX Features
+## 🎨 UI/UX
 
-- **Responsive Design** - Works on all device sizes
-- **Modern Interface** - Clean, professional design
-- **Interactive Charts** - Real-time data visualization
-- **Search & Filtering** - Easy data discovery
-- **Pagination** - Efficient data browsing
-- **Loading States** - Smooth user experience
-- **Form Validation** - Client-side validation
+* Responsive layout
+* Clean, modern interface
+* Interactive charts
+* Search, filter, pagination
+* Proper loading & empty states
+* Client-side form validation
+
+---
 
 ## 🧪 Testing Data
 
-The seed script creates sample data:
-- 2 demo domains with different configurations
-- Sample knowledge base entries
-- 50+ token usage logs with varied data
-- Admin user for immediate access
+Seeders provide:
+
+* 2 demo domains
+* KB entries
+* 50+ token usage logs
+* Admin user
+
+---
 
 ## 🚀 Production Deployment
 
-### Environment Variables
-Set production values for:
-- `MONGODB_URI` - Production MongoDB connection
-- `JWT_SECRET` - Strong production secret
-- `NODE_ENV=production`
+### Environment
+
+* Set strong values for `JWT_SECRET` and `DB_ENCRYPTION_KEY`
+* `NODE_ENV=production`
 
 ### Build Frontend
+
 ```bash
 npm run build
 ```
 
-### Process Management
-Use PM2 or similar for production:
+### Run Backend with PM2
+
 ```bash
 pm2 start backend/server.js --name "chatbot-admin-api"
 ```
 
+---
+
 ## 🤝 Contributing
 
-1. Fork the repository
+1. Fork
 2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## 📝 License
-
-This project is licensed under the MIT License.
-
-## 🆘 Support
-
-For issues and questions:
-1. Check the existing documentation
-2. Review the code comments
-3. Create an issue with detailed description
-4. Provide steps to reproduce any bugs
+3. Commit with tests (if applicable)
+4. Submit a PR
 
 ---
 
-**Demo Credentials:**
-- Email: `admin@chatbot.com`
-- Password: `admin123`
+## 📝 License
 
-Access the application at `http://localhost:5173` after starting both servers.
+MIT
+
+---
+
+## 🆘 Support
+
+* Read documentation & code comments
+* Open an issue with steps to reproduce
+
+---
+
+**Demo Credentials**
+
+* Email: `admin@chatbot.com`
+* Password: `admin123`
+
+> Access the app at `http://localhost:5173` after starting both servers.

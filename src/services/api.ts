@@ -182,6 +182,11 @@ class ApiService {
     return response.data;
   }
 
+  async revealOpenAIKey(domainId: string) {
+  const response = await this.api.post(`/domains/${domainId}/reveal-key`);
+  return response.data; // expected to return { openAIKey: string }
+}
+
 }
 
 export const apiService = new ApiService();
