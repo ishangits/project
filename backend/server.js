@@ -9,7 +9,7 @@ import domainRoutes from './routes/domains.js';
 import kbRoutes from './routes/kb.js';
 import tokenRoutes from './routes/tokens.js';
 import reportRoutes from './routes/reports.js';
-import invoiceRoutes from './routes/invoices.js';
+// import invoiceRoutes from './routes/invoices.js';
 
 dotenv.config();
 
@@ -30,7 +30,7 @@ app.use('/api/domains', domainRoutes);
 app.use('/api/kb', kbRoutes);
 app.use('/api/tokens', tokenRoutes);
 app.use('/api/reports', reportRoutes);
-app.use('/api', invoiceRoutes);
+// app.use('/api', invoiceRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -44,7 +44,7 @@ app.use((err, req, res, next) => {
 });
 
 // Sync Sequelize models & start server
-sequelize.sync({ alter: true }) // alter: true updates tables to match models
+sequelize.sync({ alter: false }) // alter: true updates tables to match models
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

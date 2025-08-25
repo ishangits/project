@@ -15,8 +15,72 @@ Domain.init(
     },
     name: { type: DataTypes.STRING, allowNull: false },
     url: { type: DataTypes.STRING, allowNull: false },
-    openAIKey: { type: DataTypes.STRING },
-    
+  openAIKey: {
+    type: DataTypes.TEXT,
+    set(value){
+      if(!value) return this.setDataValue('openAIKey', null)
+   
+    try {
+      const algorithm = 'aes-256-cbc';
+      const key = crypto.scryptSync(
+        process.env.DB_ENCRYPTION_KEY || 'default-backup-key-32-chars-long!',
+        'salt',
+        32
+      );
+    const iv = crypto.randomBytes(16);
+
+    const cipher = crypto.createCipheriv(algorithm, key, iv);
+    let encrypted = cipher.update(value, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+
+    this.setDataValue('openAIKey', iv.toString('hex') + ':' + encrypted);
+    } catch (err) {
+         console.error('Error encrypting OpenAI key:', err);
+      this.setDataValue('openAIKey', null);
+    }
+  },    
+get() {
+  const encryptedData = this.getDataValue('openAIKey');
+  if (!encryptedData) return null;
+
+  try {
+    const algorithm = 'aes-256-cbc';
+    const parts = encryptedData.split(':');
+
+    // Ensure format is correct
+    if (parts.length !== 2) {
+      console.error('Invalid encrypted data format for openAIKey:', encryptedData);
+      return null;
+    }
+
+    const ivHex = parts[0];
+    const encrypted = parts[1];
+
+    const iv = Buffer.from(ivHex, 'hex');
+    if (iv.length !== 16) {
+      console.error('Invalid IV length:', iv.length, 'expected 16 bytes');
+      return null;
+    }
+
+    const key = crypto.scryptSync(
+      process.env.DB_ENCRYPTION_KEY || 'default-backup-key-32-chars-long!',
+      'salt',
+      32
+    );
+
+    const decipher = crypto.createDecipheriv(algorithm, key, iv);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+
+  } catch (err) {
+    console.error('Error decrypting OpenAI key:', err);
+    return null;
+  }
+}
+
+
+},
     // New database connection fields
     dbHost: { type: DataTypes.STRING },
     dbUser: { type: DataTypes.STRING },

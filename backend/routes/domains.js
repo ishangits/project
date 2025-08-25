@@ -4,10 +4,11 @@ import { Op } from 'sequelize';
 import Domain from '../models/Domain.js';
 import TokenUsageLog from '../models/TokenUsageLog.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { maskKey } from '../utils/mask.js';
 
 const router = express.Router();
 
-// ✅ Get all domains with pagination + search
+// ✅ Get all domains with pagination + search (masked OpenAI keys)
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '', sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
@@ -30,8 +31,14 @@ router.get('/', authenticateToken, async (req, res) => {
       offset: parseInt(offset),
     });
 
+    // Mask OpenAI keys before sending
+    const maskedDomains = domains.map(d => ({
+      ...d.toJSON(),
+      openAIKey: maskKey(d.openAIKey)
+    }));
+
     res.json({
-      domains,
+      domains: maskedDomains,
       totalPages: Math.ceil(total / limit),
       currentPage: parseInt(page),
       total,
@@ -42,25 +49,46 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// ✅ Get domain by ID
+// ✅ Get domain by ID (masked OpenAI key)
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const domain = await Domain.findByPk(req.params.id);
     if (!domain) return res.status(404).json({ message: 'Domain not found' });
-    res.json(domain);
+
+    const maskedDomain = {
+      ...domain.toJSON(),
+      openAIKey: maskKey(domain.openAIKey)
+    };
+
+    res.json(maskedDomain);
   } catch (error) {
     console.error('Get domain error:', error);
     res.status(500).json({ message: 'Error fetching domain' });
   }
 });
 
+// ✅ Reveal OpenAI key (used on Edit modal when user clicks eye icon)
+router.post('/:id/reveal-key', authenticateToken, async (req, res) => {
+  try {
+    const domain = await Domain.findByPk(req.params.id);
+    if (!domain) return res.status(404).json({ message: 'Domain not found' });
+
+    // Decrypted key via model getter
+    const decryptedKey = domain.openAIKey;
+    res.json({ openAIKey: decryptedKey });
+  } catch (err) {
+    console.error('Error revealing key:', err);
+    res.status(500).json({ message: 'Failed to reveal key' });
+  }
+});
+
 // ✅ Create new domain
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { name, url, openAIKey, dbHost, dbUser, dbPassword, dbDatabase, dbPort   } = req.body;
+    const { name, url, openAIKey, dbHost, dbUser, dbPassword, dbDatabase, dbPort } = req.body;
     if (!name || !url) return res.status(400).json({ message: 'Name and URL are required' });
 
-    const domain = await Domain.create({ name, url, openAIKey, dbHost, dbUser, dbPassword, dbDatabase,dbPort   });
+    const domain = await Domain.create({ name, url, openAIKey, dbHost, dbUser, dbPassword, dbDatabase, dbPort });
     res.status(201).json(domain);
   } catch (error) {
     console.error('Create domain error:', error);
@@ -69,12 +97,11 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // ✅ Update domain
-// PUT /domains/:id
 router.put('/:id', async (req, res) => {
   try {
-    const { id } = req.params; // ✅ get id from params
+    const { id } = req.params;
     const [updated] = await Domain.update(req.body, {
-      where: { id }, // ✅ use your custom id
+      where: { id },
     });
 
     if (updated) {
@@ -90,12 +117,11 @@ router.put('/:id', async (req, res) => {
 });
 
 // ✅ Delete domain
-// DELETE /domains/:id
 router.delete('/:id', async (req, res) => {
   try {
-    const { id } = req.params; // ✅ get id
+    const { id } = req.params;
     const deleted = await Domain.destroy({
-      where: { id }, // ✅ match by custom id
+      where: { id },
     });
 
     if (deleted) {
@@ -108,7 +134,6 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete domain' });
   }
 });
-
 
 // ✅ Update KB timestamp
 router.post('/:id/kb-update', authenticateToken, async (req, res) => {
