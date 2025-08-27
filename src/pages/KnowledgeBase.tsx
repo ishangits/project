@@ -1,16 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useState, useEffect } from 'react';
-import { apiService } from '../services/api';
+import React, { useState, useEffect } from "react";
+import { apiService } from "../services/api";
 import {
   Upload,
   Plus,
   Search,
-  Trash2,
   FileText,
-  Calendar,
   RefreshCw,
-  Filter
-} from 'lucide-react';
+  Filter,
+} from "lucide-react";
 
 interface Domain {
   id: string;
@@ -33,25 +32,23 @@ interface KBEntry {
     url?: string;
   };
   status: string;
-  tags: string[];
   createdAt: string;
 }
 
 const KnowledgeBase: React.FC = () => {
   const [domains, setDomains] = useState<Domain[]>([]);
-  const [selectedDomain, setSelectedDomain] = useState<string>('');
+  const [selectedDomain, setSelectedDomain] = useState<string>("");
   const [entries, setEntries] = useState<KBEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [formData, setFormData] = useState({
-    question: '',
-    answer: '',
-    tags: ''
+    question: "",
+    answer: "",
   });
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(false);
@@ -64,30 +61,57 @@ const KnowledgeBase: React.FC = () => {
         setSelectedDomain(response.domains[0].id);
       }
     } catch (error) {
-      console.error('Error fetching domains:', error);
+      console.error("Error fetching domains:", error);
     }
   };
 
-  const fetchEntries = async (domainId: string, page = 1, search = '', type = '') => {
-    if (!domainId) return;
-    
-    try {
-      setLoading(true);
-      const response = await apiService.getKBEntries(domainId, {
-        page,
-        limit: 10,
-        search,
-        type
-      });
-      setEntries(response.entries);
-      setTotalPages(response.totalPages);
-      setCurrentPage(response.currentPage);
-    } catch (error) {
-      console.error('Error fetching KB entries:', error);
-    } finally {
-      setLoading(false);
+  const fetchEntries = async (
+  domainId: string,
+  page = 1,
+  // search = "",
+  // type = ""
+) => {
+  if (!domainId) return;
+
+  try {
+    setLoading(true);
+    const response = await apiService.getKBEntries(domainId);
+
+    let entries: KBEntry[] = [];
+
+    if (Array.isArray(response)) {
+      // Backend returned a simple array
+      entries = response.map((item: any) => ({
+        _id: item.id?.toString(),
+        type: "manual", // default since API doesn’t send it
+        question: item.title || "",
+        answer: item.content || "",
+        content: item.content || "",
+        source: "manual",
+        metadata: {},
+        status: "active",
+        createdAt: new Date().toISOString(),
+      }));
+      setTotalPages(1);
+      setCurrentPage(1);
+    } else {
+      // Backend returned paginated object
+      entries = response.entries || response.rows || [];
+      const total = response.total || response.count || entries.length;
+      setTotalPages(response.totalPages || Math.ceil(total / 10));
+      setCurrentPage(response.currentPage || page);
     }
-  };
+
+    setEntries(entries);
+  } catch (error) {
+    console.error("Error fetching KB entries:", error);
+    setEntries([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   useEffect(() => {
     fetchDomains();
@@ -95,14 +119,14 @@ const KnowledgeBase: React.FC = () => {
 
   useEffect(() => {
     if (selectedDomain) {
-      fetchEntries(selectedDomain, currentPage, searchTerm, typeFilter);
+      fetchEntries(selectedDomain, currentPage);
     }
   }, [selectedDomain, currentPage, searchTerm, typeFilter]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setCurrentPage(1);
-    fetchEntries(selectedDomain, 1, searchTerm, typeFilter);
+    fetchEntries(selectedDomain, 1);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -112,10 +136,10 @@ const KnowledgeBase: React.FC = () => {
     try {
       await apiService.createKBEntry(selectedDomain, formData);
       setShowModal(false);
-      setFormData({ question: '', answer: '', tags: '' });
-      fetchEntries(selectedDomain, currentPage, searchTerm, typeFilter);
+      setFormData({ question: "", answer: "" });
+      fetchEntries(selectedDomain, currentPage);
     } catch (error) {
-      console.error('Error creating KB entry:', error);
+      console.error("Error creating KB entry:", error);
     }
   };
 
@@ -128,45 +152,51 @@ const KnowledgeBase: React.FC = () => {
       await apiService.uploadKBFile(selectedDomain, uploadFile);
       setShowUploadModal(false);
       setUploadFile(null);
-      fetchEntries(selectedDomain, currentPage, searchTerm, typeFilter);
+      fetchEntries(selectedDomain, currentPage);
     } catch (error) {
-      console.error('Error uploading file:', error);
+      console.error("Error uploading file:", error);
     } finally {
       setUploadProgress(false);
     }
   };
 
   const handleDelete = async (entryId: string) => {
-    if (!selectedDomain || !window.confirm('Are you sure you want to delete this entry?')) return;
+    if (
+      !selectedDomain ||
+      !window.confirm("Are you sure you want to delete this entry?")
+    )
+      return;
 
     try {
       await apiService.deleteKBEntry(selectedDomain, entryId);
-      fetchEntries(selectedDomain, currentPage, searchTerm, typeFilter);
+      fetchEntries(selectedDomain, currentPage);
     } catch (error) {
-      console.error('Error deleting KB entry:', error);
+      console.error("Error deleting KB entry:", error);
     }
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'manual':
-        return 'bg-blue-100 text-blue-800';
-      case 'upload':
-        return 'bg-green-100 text-green-800';
-      case 'crawled':
-        return 'bg-purple-100 text-purple-800';
-      case 'faq':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // const getTypeColor = (type: string) => {
+  //   switch (type) {
+  //     case "manual":
+  //       return "bg-blue-100 text-blue-800";
+  //     case "upload":
+  //       return "bg-green-100 text-green-800";
+  //     case "crawled":
+  //       return "bg-purple-100 text-purple-800";
+  //     case "faq":
+  //       return "bg-yellow-100 text-yellow-800";
+  //     default:
+  //       return "bg-gray-100 text-gray-800";
+  //   }
+  // };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Knowledge Base Management</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Knowledge Base Management
+        </h1>
         <div className="flex space-x-3">
           <button
             onClick={() => setShowUploadModal(true)}
@@ -217,7 +247,12 @@ const KnowledgeBase: React.FC = () => {
               Crawl Domain
             </button> */}
             <button
-              onClick={() => fetchEntries(selectedDomain, currentPage, searchTerm, typeFilter)}
+              onClick={() =>
+                fetchEntries(
+                  selectedDomain,
+                  currentPage,
+                )
+              }
               disabled={!selectedDomain}
               className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
@@ -230,7 +265,10 @@ const KnowledgeBase: React.FC = () => {
 
       {/* Search and Filters */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <form onSubmit={handleSearch} className="flex flex-col lg:flex-row gap-4">
+        <form
+          onSubmit={handleSearch}
+          className="flex flex-col lg:flex-row gap-4"
+        >
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <input
@@ -293,66 +331,43 @@ const KnowledgeBase: React.FC = () => {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {entries.map((entry) => (
-                    <tr key={entry._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(entry.type)}`}
-                        >
-                          {entry.type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="max-w-xs">
-                          {entry.question && (
-                            <div className="text-sm font-medium text-gray-900 mb-1">
-                              Q: {entry.question.substring(0, 100)}
-                              {entry.question.length > 100 && '...'}
-                            </div>
-                          )}
-                          <div className="text-sm text-gray-600">
-                            {entry.answer
-                              ? `A: ${entry.answer.substring(0, 150)}`
-                              : entry.content?.substring(0, 150) || 'No content'}
-                            {((entry.answer && entry.answer.length > 150) ||
-                              (entry.content && entry.content.length > 150)) && '...'}
-                          </div>
-                          {entry.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {entry.tags.map((tag, index) => (
-                                <span
-                                  key={index}
-                                  className="inline-flex px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {entry.metadata?.filename || entry.metadata?.url || entry.source || 'Manual'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          {new Date(entry.createdAt).toLocaleDateString()}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => handleDelete(entry._id)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Delete Entry"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+             <tbody className="bg-white divide-y divide-gray-200">
+  {Array.isArray(entries) && entries.length > 0 ? (
+    entries.map((entry) => (
+      <tr key={entry._id}>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          {entry.type}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+          <div className="font-medium">{entry.question}</div>
+          <div className="text-gray-500">{entry.answer}</div>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          {entry.source}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          {new Date(entry.createdAt).toLocaleDateString()}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+          <button
+            onClick={() => handleDelete(entry._id)}
+            className="text-red-600 hover:text-red-900"
+          >
+            Delete
+          </button>
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan={5} className="text-center py-4 text-gray-500">
+        No entries found
+      </td>
+    </tr>
+  )}
+</tbody>
+
+
               </table>
             </div>
 
@@ -364,22 +379,21 @@ const KnowledgeBase: React.FC = () => {
                     Page {currentPage} of {totalPages}
                   </div>
                   <div className="flex space-x-2">
-                  <button
-  onClick={() => setCurrentPage(currentPage - 1)}
-  disabled={Number(currentPage) === 1}
-  className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
->
-  Previous
-</button>
+                    <button
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={Number(currentPage) === 1}
+                      className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
 
-<button
-  onClick={() => setCurrentPage(Number(currentPage) + 1)}
-  disabled={Number(currentPage) === Number(totalPages)}
-  className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
->
-  Next
-</button>
-
+                    <button
+                      onClick={() => setCurrentPage(Number(currentPage) + 1)}
+                      disabled={Number(currentPage) === Number(totalPages)}
+                      className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
+                    >
+                      Next
+                    </button>
                   </div>
                 </div>
               </div>
@@ -389,7 +403,9 @@ const KnowledgeBase: React.FC = () => {
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">Please select a domain to view knowledge base entries</p>
+              <p className="text-gray-500">
+                Please select a domain to view knowledge base entries
+              </p>
             </div>
           </div>
         )}
@@ -399,7 +415,9 @@ const KnowledgeBase: React.FC = () => {
       {showModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Add Knowledge Base Entry</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              Add Knowledge Base Entry
+            </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -409,7 +427,9 @@ const KnowledgeBase: React.FC = () => {
                   type="text"
                   required
                   value={formData.question}
-                  onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, question: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter the question"
                 />
@@ -422,23 +442,27 @@ const KnowledgeBase: React.FC = () => {
                   required
                   rows={4}
                   value={formData.answer}
-                  onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, answer: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter the answer"
                 />
               </div>
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Tags (comma-separated)
                 </label>
                 <input
                   type="text"
                   value={formData.tags}
-                  onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tags: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="support, contact, help"
                 />
-              </div>
+              </div> */}
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
@@ -463,7 +487,9 @@ const KnowledgeBase: React.FC = () => {
       {showUploadModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Upload KB File</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              Upload KB File
+            </h3>
             <form onSubmit={handleFileUpload} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -476,7 +502,8 @@ const KnowledgeBase: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  File should have 'question' and 'answer' columns (PDFs will extract text automatically)
+                  File should have 'question' and 'answer' columns (PDFs will
+                  extract text automatically)
                 </p>
               </div>
               <div className="flex justify-end space-x-3 pt-4">
@@ -492,7 +519,7 @@ const KnowledgeBase: React.FC = () => {
                   disabled={!uploadFile || uploadProgress}
                   className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
                 >
-                  {uploadProgress ? 'Uploading...' : 'Upload'}
+                  {uploadProgress ? "Uploading..." : "Upload"}
                 </button>
               </div>
             </form>

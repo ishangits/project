@@ -5,12 +5,10 @@ import {
   Plus,
   Search,
   Edit3,
-  Trash2,
   ExternalLink,
   Globe,
   Calendar,
   RefreshCw,
-  Eye,
 } from "lucide-react";
 
 interface Domain {
@@ -41,11 +39,9 @@ const Domains: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showModal, setShowModal] = useState(false);
-  const [showOpenAIKey, setShowOpenAIKey] = useState(false);
   const [editingDomain, setEditingDomain] = useState<Domain | null>(null);
-  const [showTokenModal, setShowTokenModal] = useState(false);
-  const [selectedDomain, setSelectedDomain] = useState<Domain | null>(null);
   const [formData, setFormData] = useState({
+    id: "",
     name: "",
     url: "",
     openAIKey: "",
@@ -77,11 +73,6 @@ const Domains: React.FC = () => {
     }
   };
 
-  const maskOpenAIKey = (key: string) => {
-  if (!key) return "";
-  return key.slice(0, 4) + "*".repeat(Math.max(key.length - 8, 4)) + key.slice(-4);
-};
-
   useEffect(() => {
     fetchDomains(currentPage, searchTerm);
   }, [currentPage, searchTerm]);
@@ -91,61 +82,85 @@ const Domains: React.FC = () => {
     setCurrentPage(1);
     fetchDomains(1, searchTerm);
   };
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (editingDomain) {
-        await apiService.updateDomain(editingDomain.id, formData);
-      } else {
-        await apiService.createDomain(formData);
-      }
-      setShowModal(false);
-      setEditingDomain(null);
-      setFormData({
-        name: "",
-        url: "",
-        openAIKey: "",
-        dbHost: "",
-        dbPort: "",
-        dbUser: "",
-        dbPassword: "",
-        dbDatabase: "",
-        status: "active",
-      });
-      fetchDomains(currentPage, searchTerm);
-    } catch (error) {
-      console.error("Error saving domain:", error);
-    }
-  };
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
+    if (editingDomain) {
+        console.log("Edit called", editingDomain)
 
+      await apiService.updateDomain({
+        tenantId: editingDomain.id, // use domain ID
+        name: formData.name,
+        url: formData.url,
+        status: formData.status,
+        dbHost: formData.dbHost,
+  dbPort: Number(formData.dbPort), 
+        dbUser: formData.dbUser,
+        dbPassword: formData.dbPassword,
+        dbDatabase: formData.dbDatabase,
+      });
+    } else {
+      await apiService.createDomain(formData);
+    }
+
+    setShowModal(false);
+    setEditingDomain(null);
+    setFormData({
+      id: "",
+      name: "",
+      url: "",
+      openAIKey: "",
+      dbHost: "",
+      dbPort: "",
+      dbUser: "",
+      dbPassword: "",
+      dbDatabase: "",
+      status: "active",
+    });
+    fetchDomains(currentPage, searchTerm);
+  } catch (error) {
+    console.error("Error saving domain:", error);
+  }
+};
+
+
+const handleTrainModel = async (domainId: string) => {
+  try {
+    const response = await apiService.trainModel({ tenantId: domainId });
+    console.log("Training started:", response);
+    alert("Training started successfully!");
+  } catch (error: any) {
+    console.error("Failed to start training:", error);
+    alert(error.response?.data?.message || "Failed to start training");
+  }
+};
   const handleEdit = (domain: Domain) => {
     setEditingDomain(domain);
     setFormData({
+      id: domain.id,
       name: domain.name,
       url: domain.url,
       status: domain.status,
-    openAIKey: maskOpenAIKey(domain.openAIKey),
+      openAIKey: domain.openAIKey,
       dbHost: domain.dbHost || "",
       dbPort: domain.dbPort || "",
       dbUser: domain.dbUser || "",
       dbPassword: domain.dbPassword || "",
       dbDatabase: domain.dbDatabase || "",
     });
-      setShowOpenAIKey(false); // start as hidden
-
     setShowModal(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this domain?")) {
-      try {
-        await apiService.deleteDomain(id);
-        fetchDomains(currentPage, searchTerm);
-      } catch (error) {
-        console.error("Error deleting domain:", error);
-      }
-    }
-  };
+  // const handleDelete = async (id: string) => {
+  //   if (window.confirm("Are you sure you want to delete this domain?")) {
+  //     try {
+  //       await apiService.deleteDomain(id);
+  //       fetchDomains(currentPage, searchTerm);
+  //     } catch (error) {
+  //       console.error("Error deleting domain:", error);
+  //     }
+  //   }
+  // };
 
   const handleKBUpdate = async (id: string) => {
     try {
@@ -159,6 +174,7 @@ const Domains: React.FC = () => {
   const openModal = () => {
     setEditingDomain(null);
     setFormData({
+    id: "",
       name: "",
       url: "",
       openAIKey: "",
@@ -170,15 +186,6 @@ const Domains: React.FC = () => {
       status: "active",
     });
     setShowModal(true);
-  };
-
-  const showTokenDetails = (domain: Domain) => {
-    setSelectedDomain(domain);
-    setShowTokenModal(true);
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
   };
 
   return (
@@ -310,13 +317,13 @@ const Domains: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center space-x-2">
-                          <button
+                          {/* <button
                             onClick={() => showTokenDetails(domain)}
                             className="text-blue-600 hover:text-blue-900"
                             title="View API Details"
                           >
                             <Eye className="h-4 w-4" />
-                          </button>
+                          </button> */}
                           {/* <button
                             onClick={() => showInvoices(domain)}
                             className="text-purple-600 hover:text-purple-900"
@@ -331,13 +338,20 @@ const Domains: React.FC = () => {
                           >
                             <Edit3 className="h-4 w-4" />
                           </button>
-                          <button
+                          {/* <button
                             onClick={() => handleDelete(domain.id)}
                             className="text-red-600 hover:text-red-900"
                             title="Delete Domain"
                           >
                             <Trash2 className="h-4 w-4" />
-                          </button>
+                          </button> */}
+                            <button
+    onClick={() => handleTrainModel(domain.id)}
+    className="text-green-600 hover:text-green-900"
+    title="Train Model"
+  >
+    Train
+  </button>
                         </div>
                       </td>
                     </tr>
@@ -415,136 +429,122 @@ const Domains: React.FC = () => {
                 />
               </div>
               <div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    OpenAI Key
-  </label>
-  <input
-      type={showOpenAIKey ? "text" : "password"}
-    placeholder="Enter OpenAI Key"
-    value={formData.openAIKey}
-    onChange={(e) => setFormData({ ...formData, openAIKey: e.target.value })}
-    className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-600 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300"
-  />
-  {editingDomain && (
-      <button
-        type="button"
-        onClick={async () => {
-          if (!showOpenAIKey) {
-            // fetch actual key from backend
-            const res = await apiService.revealOpenAIKey(editingDomain.id);
-            setFormData((prev) => ({ ...prev, openAIKey: res.openAIKey }));
-          } else {
-            // mask key again
-            setFormData((prev) => ({
-              ...prev,
-              openAIKey: maskOpenAIKey(prev.openAIKey),
-            }));
-          }
-          setShowOpenAIKey(!showOpenAIKey);
-        }}
-        className="px-2 py-1 border border-gray-300 rounded-md bg-white text-gray-600 hover:bg-gray-100"
-      >
-        {showOpenAIKey ? "Hide" : "Show"}
-      </button>
-    )}
-</div>
-             <div className="border-t pt-4 mt-4">
-  <h4 className="text-sm font-medium text-gray-500 mb-3">
-    Database Connection Info
-  </h4>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  OpenAI Key
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter OpenAI Key"
+                  value={formData.openAIKey}
+                  onChange={(e) =>
+                    setFormData({ ...formData, openAIKey: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-600 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300"
+                />
+              </div>
+              <div className="border-t pt-4 mt-4">
+                <h4 className="text-sm font-medium text-gray-500 mb-3">
+                  Database Connection Info
+                </h4>
 
-  <div className="grid grid-cols-2 gap-4">
-    {/* Database Host */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Database Host
-      </label>
-      <input
-        type="text"
-        value={formData.dbHost}
-        onChange={(e) => setFormData({ ...formData, dbHost: e.target.value })}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        placeholder="localhost"
-      />
-    </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Database Host */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Database Host
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.dbHost}
+                      onChange={(e) =>
+                        setFormData({ ...formData, dbHost: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="localhost"
+                    />
+                  </div>
 
-    {/* Database User */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Database User
-      </label>
-      <input
-        type="text"
-        value={formData.dbUser}
-        onChange={(e) => setFormData({ ...formData, dbUser: e.target.value })}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        placeholder="username"
-      />
-    </div>
+                  {/* Database User */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Database User
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.dbUser}
+                      onChange={(e) =>
+                        setFormData({ ...formData, dbUser: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="username"
+                    />
+                  </div>
 
-    {/* Database Password */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Database Password
-      </label>
-      <input
-        type="password"
-        value={formData.dbPassword}
-        onChange={(e) =>
-          setFormData({ ...formData, dbPassword: e.target.value })
-        }
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        placeholder="••••••••"
-      />
-    </div>
+                  {/* Database Password */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Database Password
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.dbPassword}
+                      onChange={(e) =>
+                        setFormData({ ...formData, dbPassword: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="••••••••"
+                    />
+                  </div>
 
-    {/* Database Name */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Database Name
-      </label>
-      <input
-        type="text"
-        value={formData.dbDatabase}
-        onChange={(e) =>
-          setFormData({ ...formData, dbDatabase: e.target.value })
-        }
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        placeholder="database_name"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Database Port
-      </label>
-      <input
-        type="text"
-        value={formData.dbPort}
-        onChange={(e) =>
-          setFormData({ ...formData, dbPort: e.target.value })
-        }
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        placeholder="Port"
-      />
-    </div>
-  </div>
-</div>
+                  {/* Database Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Database Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.dbDatabase}
+                      onChange={(e) =>
+                        setFormData({ ...formData, dbDatabase: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="database_name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Database Port
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.dbPort}
+                      onChange={(e) =>
+                        setFormData({ ...formData, dbPort: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Port"
+                    />
+                  </div>
+                </div>
+              </div>
 
-{/* Status below DB Info */}
-<div className="mt-4">
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Status
-  </label>
-  <select
-    value={formData.status}
-    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-  >
-    <option value="active">Active</option>
-    <option value="inactive">Inactive</option>
-    <option value="suspended">Suspended</option>
-  </select>
-</div>
+              {/* Status below DB Info */}
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) =>
+                    setFormData({ ...formData, status: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              </div>
 
               <div className="flex justify-end space-x-3 pt-4">
                 <button
@@ -567,7 +567,7 @@ const Domains: React.FC = () => {
       )}
 
       {/* API Details Modal */}
-      {showTokenModal && selectedDomain && (
+      {/* {showTokenModal && selectedDomain && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
             <h3 className="text-lg font-bold text-gray-900 mb-4">
@@ -633,7 +633,7 @@ const Domains: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 };

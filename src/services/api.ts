@@ -52,7 +52,7 @@ class ApiService {
 
   // Domain endpoints
   async getDomains(params?: any) {
-    const response = await this.api.get('/domains', { params });
+    const response = await this.api.get('/tenants', { params });
     return response.data;
   }
 
@@ -62,14 +62,36 @@ class ApiService {
   }
 
   async createDomain(data: any) {
-    const response = await this.api.post('/domains', data);
+    const response = await this.api.post('/tenants', data);
     return response.data;
   }
 
-  async updateDomain(id: string, data: any) {
-    const response = await this.api.put(`/domains/${id}`, data);
-    return response.data;
-  }
+// api.ts
+async trainModel(payload: { tenantId: string }) {
+  const response = await this.api.post(`/train`, payload);
+  return response.data;
+}
+
+ async updateDomain(data: { tenantId: string; name?: string; url?: string; status?: string; dbHost?: string; dbPort?: number; dbUser?: string; dbPassword?: string; dbDatabase?: string }) {
+  if (!data.tenantId) throw new Error("tenantId is required for updating a domain");
+
+  const payload = {
+    id: data.tenantId,
+    name: data.name,
+    url: data.url,
+    status: data.status,
+    dbHost: data.dbHost,
+    dbPort: data.dbPort,
+    dbUser: data.dbUser,
+    dbPassword: data.dbPassword,
+    dbDatabase: data.dbDatabase,
+  };
+
+  const response = await this.api.post(`/tenants/update`, payload);
+  return response.data;
+}
+
+
 
   async deleteDomain(id: string) {
     const response = await this.api.delete(`/domains/${id}`);
@@ -82,26 +104,36 @@ class ApiService {
   }
 
   // Knowledge Base endpoints
-  async getKBEntries(domainId: string, params?: any) {
-    const response = await this.api.get(`/kb/${domainId}`, { params });
+  async getKBEntries(domainId: string) {
+    const response = await this.api.get(`/kb/${domainId}`);
     return response.data;
   }
 
-  async createKBEntry(domainId: string, data: any) {
-    const response = await this.api.post(`/kb/${domainId}/manual`, data);
-    return response.data;
-  }
+ async createKBEntry(domainId: string, data: { question: string; answer: string; tags?: string }) {
+  // map question → title, answer → content
+  const payload = {
+    tenantId: domainId,
+    title: data.question,
+    content: data.answer,
+    // tags: data.tags ? data.tags.split(',').map(tag => tag.trim()) : []
+  };
 
-  async uploadKBFile(domainId: string, file: File) {
-    const formData = new FormData();
-    formData.append('file', file);
-    const response = await this.api.post(`/kb/${domainId}/upload`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  }
+  const response = await this.api.post(`/kb`, payload);
+  return response.data;
+}
+
+
+ async uploadKBFile(domainId: string, file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('tenantId', domainId)
+
+  const response = await this.api.post(`/kb/upload`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+}
+
 
   async deleteKBEntry(domainId: string, entryId: string) {
     const response = await this.api.delete(`/kb/${domainId}/entries/${entryId}`);
