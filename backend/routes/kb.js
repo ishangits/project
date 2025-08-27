@@ -43,44 +43,38 @@ const upload = multer({
 // ==================== GET KB ENTRIES ====================
 router.get('/:domainId', authenticateToken, async (req, res) => {
   try {
-    const { page = 1, limit = 10, search = '', type = '' } = req.query;
     const { domainId } = req.params;
+    const { page = 1, limit = 10, search = '', type = '' } = req.query;
 
-    const where = { domainId };
+    // Build query params to forward to external API
+    const query = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      search,
+      type
+    }).toString();
 
-    if (search) {
-      where[Op.or] = [
-        { question: { [Op.like]: `%${search}%` } },
-        { answer: { [Op.like]: `%${search}%` } },
-        { content: { [Op.like]: `%${search}%` } },
-      ];
-    }
+    // Call external API instead of local DB
+    const response = await axios.get(
+      `${process.env.TENANT_API_BASE}/api/kb/${domainId}?${query}`,
+      {
+        headers: {
+          "X-API-Key": process.env.TENANT_API_KEY,
+          "Content-Type": "application/json"
+        }
+      }
+    );
 
-    if (type) {
-      where.type = type;
-    }
-
-    const { count, rows } = await KnowledgeBaseEntry.findAndCountAll({
-      where,
-      order: [["createdAt", "DESC"]],
-      limit: parseInt(limit),
-      offset: (page - 1) * limit,
-    });
-
-    res.json({
-      entries: rows,
-      totalPages: Math.ceil(count / limit),
-      currentPage: parseInt(page),
-      total: count,
-    });
+    res.json(response.data); // forward external API response
   } catch (error) {
-    console.error("Get KB entries error:", error);
-    res.status(500).json({ message: "Error fetching KB entries" });
+    console.error("Get KB entries error:", error.response?.data || error.message);
+    res.status(500).json({ message: "Failed to fetch KB entries" });
   }
 });
 
-// ==================== CREATE MANUAL KB ENTRY ====================
 
+// ==================== CREATE MANUAL KB ENTRY ====================
+// /api/kb
 router.post("/", async (req, res) => {
   try {
     const { tenantId, title, content } = req.body;
@@ -104,66 +98,50 @@ router.post("/", async (req, res) => {
 
 
 // ==================== UPLOAD KB FILE ====================
-router.post('/:domainId/upload', authenticateToken, upload.single('file'), async (req, res) => {
+router.post('/upload', authenticateToken, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-    const filePath = req.file.path;
-    let entries = [];
-
-    const domainId = req.params.domainId;
-    const fileName = req.file.originalname;
-
-    // ---- CSV ----
-    if (req.file.mimetype === 'text/csv') {
-      const results = [];
-      fs.createReadStream(filePath)
-        .pipe(csv({ separator: '\t' }))
-        .on('data', row => results.push(row))
-        .on('end', async () => {
-          entries = results.map(row => normalizeEntry(row, req.file.originalname, req.params.domainId));
-          const count = await insertOrUpdateEntries(entries);
-
-const domain = await Domain.findByPk(req.params.domainId);
-if (!domain) return res.status(404).json({ message: 'Domain not found' });
-
-await Domain.update(
-  { kbSettings: { ...domain.kbSettings, lastUpdated: new Date() } },
-  { where: { id: req.params.domainId } }
-);  
-        fs.unlinkSync(filePath);
-          res.json({ message: `Uploaded ${count} entries from CSV`, count });
-        });
-
-    // ---- Excel ----
-    } else if (req.file.mimetype.includes('excel')) {
-      const workbook = xlsx.readFile(filePath);
-      const sheetName = workbook.SheetNames[0];
-      const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
-      entries = data.map(row => normalizeEntry(row, req.file.originalname, req.params.domainId));
-      const count = await insertOrUpdateEntries(entries);
-
-      await Domain.findByIdAndUpdate(req.params.domainId, { 'kbSettings.lastUpdated': new Date() });
-      fs.unlinkSync(filePath);
-      res.json({ message: `Uploaded ${count} entries from Excel`, count });
-
-    // ---- PDF ----
-    } else if (req.file.mimetype === 'application/pdf') {
-      const buffer = fs.readFileSync(filePath);
-      const data = await pdf(buffer);
-      const lines = data.text.split('\n').map(l => l.trim()).filter(Boolean);
-
-      entries = lines.map(line => {
-        const [question, answer] = line.split('\t'); // adapt separator
-        return { suburbname: question, postcode: '', response: answer };
-      }).map(row => normalizeEntry(row, req.file.originalname, req.params.domainId));
-
-      const count = await insertOrUpdateEntries(entries);
-
-      await Domain.findByIdAndUpdate(req.params.domainId, { 'kbSettings.lastUpdated': new Date() });
-      fs.unlinkSync(filePath);
-      res.json({ message: `Uploaded ${count} entries from PDF`, count });
+    const { tenantId } = req.body;
+    if (!tenantId) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({ message: 'tenantId is required in body' });
     }
+
+    const filePath = req.file.path;
+    const results = [];
+
+    // Read CSV (comma separated, can change to \t if needed)
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on('data', row => results.push(row))
+      .on('end', async () => {
+        let successCount = 0;
+
+        for (const row of results) {
+          const question = row.question || row.Question;
+          const answer = row.answer || row.Answer;
+
+          if (!question || !answer) continue;
+
+          try {
+            await axios.post(`${process.env.TENANT_API_BASE}/api/kb/`, {
+              tenantId,
+              title: question,
+              content: answer,
+            }, {
+              headers: { "X-API-Key": process.env.TENANT_API_KEY }
+            });
+
+            successCount++;
+          } catch (err) {
+            console.error("❌ Failed to push entry:", row, err.message);
+          }
+        }
+
+        fs.unlinkSync(filePath);
+        res.json({ message: `Uploaded ${successCount} KB entries from CSV`, count: successCount });
+      });
 
   } catch (error) {
     console.error('Upload KB file error:', error);
@@ -173,7 +151,7 @@ await Domain.update(
 });
 
 
-// Delete KB entry
+
 // Delete KB entry
 router.delete('/:domainId/entries/:entryId', authenticateToken, async (req, res) => {
   try {
@@ -194,55 +172,51 @@ router.delete('/:domainId/entries/:entryId', authenticateToken, async (req, res)
   }
 });
 
-
-// Crawl domain (placeholder)
-
-
 // Crawl domain
-router.post('/:domainId/crawl', authenticateToken, async (req, res) => {
-  try {
-    const { domainId } = req.params;
-    const domain = await Domain.findByPk(domainId);
-    if (!domain) {
-      return res.status(404).json({ message: "Domain not found" });
-    }
+// router.post('/:domainId/crawl', authenticateToken, async (req, res) => {
+//   try {
+//     const { domainId } = req.params;
+//     const domain = await Domain.findByPk(domainId);
+//     if (!domain) {
+//       return res.status(404).json({ message: "Domain not found" });
+//     }
 
-    const url = domain.url;
-    if (!url) {
-      return res.status(400).json({ message: "Domain URL is empty" });
-    }
+//     const url = domain.url;
+//     if (!url) {
+//       return res.status(400).json({ message: "Domain URL is empty" });
+//     }
 
-    const response = await axios.get(url);
-    const $ = cheerio.load(response.data);
-    const entries = [];
+//     const response = await axios.get(url);
+//     const $ = cheerio.load(response.data);
+//     const entries = [];
 
-    $('h1,h2,h3,p').each((i, el) => {
-      const text = $(el).text().trim();
-      if (text.length > 20) {
-        entries.push({
-          domainId,
-          type: "crawled",
-          content: text,
-          metadata: { url, crawlDate: new Date() },
-        });
-      }
-    });
+//     $('h1,h2,h3,p').each((i, el) => {
+//       const text = $(el).text().trim();
+//       if (text.length > 20) {
+//         entries.push({
+//           domainId,
+//           type: "crawled",
+//           content: text,
+//           metadata: { url, crawlDate: new Date() },
+//         });
+//       }
+//     });
 
-    if (entries.length > 0) {
-      await KnowledgeBaseEntry.bulkCreate(entries);
-    }
+//     if (entries.length > 0) {
+//       await KnowledgeBaseEntry.bulkCreate(entries);
+//     }
 
-    await Domain.update(
-      { kbSettings: { lastUpdated: new Date() } },
-      { where: { id: domainId } }
-    );
+//     await Domain.update(
+//       { kbSettings: { lastUpdated: new Date() } },
+//       { where: { id: domainId } }
+//     );
 
-    res.json({ message: `Crawl completed. ${entries.length} entries added.`, count: entries.length });
-  } catch (error) {
-    console.error("Crawl domain error:", error);
-    res.status(500).json({ message: "Error crawling domain", error: error.message });
-  }
-});
+//     res.json({ message: `Crawl completed. ${entries.length} entries added.`, count: entries.length });
+//   } catch (error) {
+//     console.error("Crawl domain error:", error);
+//     res.status(500).json({ message: "Error crawling domain", error: error.message });
+//   }
+// });
 
 
 

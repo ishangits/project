@@ -9,6 +9,7 @@ import axios from 'axios';
 
 
 const router = express.Router();
+// /api/tenants
 
 // ✅ Get all domains with pagination + search
 router.get('/', authenticateToken, async (req, res) => {
@@ -16,7 +17,7 @@ router.get('/', authenticateToken, async (req, res) => {
     const { page = 1, limit = 10, search = '', sortBy = 'name', sortOrder = 'DESC' } = req.query;
     const offset = (page - 1) * limit;
 
-    // Call external tenants API
+    // External tenants API
     const response = await axios.get('http://65.2.3.52:3000/api/tenants', {
       headers: {
         'Content-Type': 'application/json',
@@ -51,15 +52,15 @@ router.get('/', authenticateToken, async (req, res) => {
     // Pagination
     const paginated = filtered.slice(offset, offset + parseInt(limit));
 
-    // ✅ Normalize response for frontend
    // ✅ Normalize response for frontend
 const normalized = paginated.map((d, idx) => ({
+  
   id: d.id || idx + 1,
   name: d.name,
   url: d.domain,
-  openAIKey: d.openai_api_key || "",   // map correctly
+  openAIKey: d.openai_api_key || "",
   domainId: d.domainId || d.id || idx + 1,
-  apiEndpoint: d.apiEndpoint || `${d.domain}/api`, // fallback
+  apiEndpoint: d.apiEndpoint || `${d.domain}/api`, 
   authToken: d.authToken || "",
 
   // 🔹 DB fields
@@ -89,28 +90,27 @@ const normalized = paginated.map((d, idx) => ({
   }
 });
 
-
-
 // ✅ Get domain by ID
-router.get('/:id', authenticateToken, async (req, res) => {
-  try {
-    const domain = await Domain.findByPk(req.params.id);
-    if (!domain) return res.status(404).json({ message: 'Domain not found' });
-    res.json(domain);
-  } catch (error) {
-    console.error('Get domain error:', error);
-    res.status(500).json({ message: 'Error fetching domain' });
-  }
-});
+// router.get('/:id', authenticateToken, async (req, res) => {
+//   try {
+//     const domain = await Domain.findByPk(req.params.id);
+//     if (!domain) return res.status(404).json({ message: 'Domain not found' });
+//     res.json(domain);
+//   } catch (error) {
+//     console.error('Get domain error:', error);
+//     res.status(500).json({ message: 'Error fetching domain' });
+//   }
+// });
 
 
 // ✅ Create new domain (only external API, no local DB save)
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const { name, url, openAIKey, dbHost, dbUser, dbPassword, dbDatabase, dbPort } = req.body;
+    console.log(`[CREATE DOMAIN] Request received:`, req.body); // <-- log input
+
     if (!name || !url) return res.status(400).json({ message: 'Name and URL are required' });
 
-    // 🔹 1. Call external tenant API
     const externalResp = await axios.post(
       `${process.env.TENANT_API_BASE}/api/tenants/`,
       {
@@ -131,21 +131,17 @@ router.post('/', authenticateToken, async (req, res) => {
       }
     );
 
-    // 🔹 Log full external API response
-    console.log("External Tenant API Response:", {
-      status: externalResp.status,
-      headers: externalResp.headers,
-      data: externalResp.data
-    });
+    console.log(`[CREATE DOMAIN] External API response:`, externalResp.data);
 
     if (!externalResp.data.success) {
+      console.log(`[CREATE DOMAIN] External API failed`, externalResp.data);
       return res.status(400).json({
         message: 'External tenant creation failed',
         details: externalResp.data
       });
     }
 
-    // 🔹 2. Just return external API response (no DB save)
+    console.log(`[CREATE DOMAIN] Domain created successfully: tenantId=${externalResp.data.tenantId}`);
     res.status(201).json({
       message: 'Domain created successfully (external only)',
       tenantId: externalResp.data.tenantId,
@@ -153,7 +149,7 @@ router.post('/', authenticateToken, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Create domain error:', error.response?.data || error.message);
+    console.error('[CREATE DOMAIN] Error:', error.response?.data || error.message);
     res.status(500).json({
       message: 'Error creating domain',
       details: error.response?.data || error.message
@@ -161,32 +157,48 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
+
 // Update tenant via external API only
-// Update tenant using ID from body
-router.put('/:id', async (req, res) => {
+router.post("/update", authenticateToken, async (req, res) => {
   try {
-    console.log('[UPDATE TENANT] Original Request Body:', req.body);
+    const {
+      id,
+      name,
+      url,
+      status,
+      dbHost,
+      dbPort,
+      dbUser,
+      dbPassword,
+      dbDatabase,
+      apiKey
+    } = req.body;
 
-    const { id } = req.params;
-    const domainData = req.body;
+    if (!id) return res.status(400).json({ error: "tenantId is required" });
 
-    const externalPayload = {
-      id: domainData.id,       // original frontend id
-      name: domainData.name,
-      domain: domainData.domain,
-      apiKey: domainData.apiKey,
-      dbIP: domainData.dbIP,
-      dbUserName: domainData.dbUserName,
-      dbName: domainData.dbName,
-      dbPass: domainData.dbPass,
-      dbPort: domainData.dbPort
+    // Build payload matching the exact API structure
+    const payload = {
+      id,
+      name: name || "",
+      domain: url || "",
+      apiKey: apiKey || "",
+      dbIP: dbHost || "",
+      dbUserName: dbUser || "",
+      dbName: dbDatabase || "",
+      dbPass: dbPassword || "",
+      dbPort: dbPort ? String(dbPort) : "",
+      status: status ? status.charAt(0).toUpperCase() + status.slice(1).toLowerCase() : "Active"
     };
 
-    console.log('[UPDATE TENANT] External API Request Body:', externalPayload);
+    // Log each field
+    console.log("[UPDATE DOMAIN] Payload fields:");
+    Object.entries(payload).forEach(([key, value]) => {
+      console.log(`[UPDATE DOMAIN] ${key}:`, value);
+    });
 
-    const externalResp = await axios.post(
-      'http://65.2.3.52:3000/api/tenants/update-tenant',
-      externalPayload,
+    const response = await axios.post(
+      `${process.env.TENANT_API_BASE}/api/tenants/update-tenant`,
+      payload,
       {
         headers: {
           'Content-Type': 'application/json',
@@ -195,27 +207,14 @@ router.put('/:id', async (req, res) => {
       }
     );
 
-    console.log('[UPDATE TENANT] External API Response:', externalResp.data);
-
-    res.json({
-      message: 'Tenant updated successfully (external API)',
-      external: externalResp.data
-    });
-
+    console.log("[UPDATE DOMAIN] External API response:", response.data);
+    res.json(response.data);
   } catch (error) {
-    console.error('[UPDATE TENANT] External API error:', error.response?.data || error.message);
-    res.status(500).json({
-      message: 'Failed to update tenant',
-      details: error.response?.data || error.message
-    });
+    console.error("[UPDATE DOMAIN] Error:", error.response?.data || error.message);
+    res.status(500).json({ error: "Failed to update domain" });
   }
 });
 
-
-
-
-
-// ✅ Delete domain
 // DELETE /domains/:id
 router.delete('/:id', async (req, res) => {
   try {
@@ -235,19 +234,19 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-router.post('/:id/reveal-key', authenticateToken, async (req, res) => {
-  try {
-    const domain = await Domain.findByPk(req.params.id);
-    if (!domain) return res.status(404).json({ message: 'Domain not found' });
+// router.post('/:id/reveal-key', authenticateToken, async (req, res) => {
+//   try {
+//     const domain = await Domain.findByPk(req.params.id);
+//     if (!domain) return res.status(404).json({ message: 'Domain not found' });
 
-    // Decrypted key via model getter
-    const decryptedKey = domain.openAIKey;
-    res.json({ openAIKey: decryptedKey });
-  } catch (err) {
-    console.error('Error revealing key:', err);
-    res.status(500).json({ message: 'Failed to reveal key' });
-  }
-});
+//     // Decrypted key via model getter
+//     const decryptedKey = domain.openAIKey;
+//     res.json({ openAIKey: decryptedKey });
+//   } catch (err) {
+//     console.error('Error revealing key:', err);
+//     res.status(500).json({ message: 'Failed to reveal key' });
+//   }
+// });
 
 
 // ✅ Update KB timestamp

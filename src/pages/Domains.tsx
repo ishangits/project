@@ -5,7 +5,6 @@ import {
   Plus,
   Search,
   Edit3,
-  Trash2,
   ExternalLink,
   Globe,
   Calendar,
@@ -41,8 +40,6 @@ const Domains: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [editingDomain, setEditingDomain] = useState<Domain | null>(null);
-  // const [showTokenModal, setShowTokenModal] = useState(false);
-  // const [selectedDomain, setSelectedDomain] = useState<Domain | null>(null);
   const [formData, setFormData] = useState({
     id: "",
     name: "",
@@ -76,11 +73,6 @@ const Domains: React.FC = () => {
     }
   };
 
-  //   const maskOpenAIKey = (key: string) => {
-  //   if (!key) return "";
-  //   return key.slice(0, 4) + "*".repeat(Math.max(key.length - 8, 4)) + key.slice(-4);
-  // };
-
   useEffect(() => {
     fetchDomains(currentPage, searchTerm);
   }, [currentPage, searchTerm]);
@@ -90,34 +82,47 @@ const Domains: React.FC = () => {
     setCurrentPage(1);
     fetchDomains(1, searchTerm);
   };
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (editingDomain) {
-        formData.id = editingDomain.id;
-        await apiService.updateDomain(formData);
-      } else {
-        await apiService.createDomain(formData);
-      }
-      setShowModal(false);
-      setEditingDomain(null);
-      setFormData({
-        id: "",
-        name: "",
-        url: "",
-        openAIKey: "",
-        dbHost: "",
-        dbPort: "",
-        dbUser: "",
-        dbPassword: "",
-        dbDatabase: "",
-        status: "active",
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
+    if (editingDomain) {
+        console.log("Edit called", editingDomain)
+
+      await apiService.updateDomain({
+        tenantId: editingDomain.id, // use domain ID
+        name: formData.name,
+        url: formData.url,
+        status: formData.status,
+        dbHost: formData.dbHost,
+  dbPort: Number(formData.dbPort), 
+        dbUser: formData.dbUser,
+        dbPassword: formData.dbPassword,
+        dbDatabase: formData.dbDatabase,
       });
-      fetchDomains(currentPage, searchTerm);
-    } catch (error) {
-      console.error("Error saving domain:", error);
+    } else {
+      await apiService.createDomain(formData);
     }
-  };
+
+    setShowModal(false);
+    setEditingDomain(null);
+    setFormData({
+      id: "",
+      name: "",
+      url: "",
+      openAIKey: "",
+      dbHost: "",
+      dbPort: "",
+      dbUser: "",
+      dbPassword: "",
+      dbDatabase: "",
+      status: "active",
+    });
+    fetchDomains(currentPage, searchTerm);
+  } catch (error) {
+    console.error("Error saving domain:", error);
+  }
+};
+
 
 const handleTrainModel = async (domainId: string) => {
   try {
@@ -129,10 +134,6 @@ const handleTrainModel = async (domainId: string) => {
     alert(error.response?.data?.message || "Failed to start training");
   }
 };
-
-
-
-
   const handleEdit = (domain: Domain) => {
     setEditingDomain(domain);
     setFormData({
@@ -150,16 +151,16 @@ const handleTrainModel = async (domainId: string) => {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this domain?")) {
-      try {
-        await apiService.deleteDomain(id);
-        fetchDomains(currentPage, searchTerm);
-      } catch (error) {
-        console.error("Error deleting domain:", error);
-      }
-    }
-  };
+  // const handleDelete = async (id: string) => {
+  //   if (window.confirm("Are you sure you want to delete this domain?")) {
+  //     try {
+  //       await apiService.deleteDomain(id);
+  //       fetchDomains(currentPage, searchTerm);
+  //     } catch (error) {
+  //       console.error("Error deleting domain:", error);
+  //     }
+  //   }
+  // };
 
   const handleKBUpdate = async (id: string) => {
     try {
@@ -186,15 +187,6 @@ const handleTrainModel = async (domainId: string) => {
     });
     setShowModal(true);
   };
-
-  // const showTokenDetails = (domain: Domain) => {
-  //   setSelectedDomain(domain);
-  //   setShowTokenModal(true);
-  // };
-
-  // const copyToClipboard = (text: string) => {
-  //   navigator.clipboard.writeText(text);
-  // };
 
   return (
     <div className="space-y-6">
@@ -346,13 +338,13 @@ const handleTrainModel = async (domainId: string) => {
                           >
                             <Edit3 className="h-4 w-4" />
                           </button>
-                          <button
+                          {/* <button
                             onClick={() => handleDelete(domain.id)}
                             className="text-red-600 hover:text-red-900"
                             title="Delete Domain"
                           >
                             <Trash2 className="h-4 w-4" />
-                          </button>
+                          </button> */}
                             <button
     onClick={() => handleTrainModel(domain.id)}
     className="text-green-600 hover:text-green-900"

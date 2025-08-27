@@ -72,10 +72,25 @@ async trainModel(payload: { tenantId: string }) {
   return response.data;
 }
 
- async updateDomain(data: any) {
-  const response = await this.api.post(`/tenants`, data);  // just `/tenants`
+ async updateDomain(data: { tenantId: string; name?: string; url?: string; status?: string; dbHost?: string; dbPort?: number; dbUser?: string; dbPassword?: string; dbDatabase?: string }) {
+  if (!data.tenantId) throw new Error("tenantId is required for updating a domain");
+
+  const payload = {
+    id: data.tenantId,
+    name: data.name,
+    url: data.url,
+    status: data.status,
+    dbHost: data.dbHost,
+    dbPort: data.dbPort,
+    dbUser: data.dbUser,
+    dbPassword: data.dbPassword,
+    dbDatabase: data.dbDatabase,
+  };
+
+  const response = await this.api.post(`/tenants/update`, payload);
   return response.data;
 }
+
 
 
   async deleteDomain(id: string) {
@@ -89,8 +104,8 @@ async trainModel(payload: { tenantId: string }) {
   }
 
   // Knowledge Base endpoints
-  async getKBEntries(domainId: string, params?: any) {
-    const response = await this.api.get(`/kb/${domainId}`, { params });
+  async getKBEntries(domainId: string) {
+    const response = await this.api.get(`/kb/${domainId}`);
     return response.data;
   }
 
@@ -108,16 +123,17 @@ async trainModel(payload: { tenantId: string }) {
 }
 
 
-  async uploadKBFile(domainId: string, file: File) {
-    const formData = new FormData();
-    formData.append('file', file);
-    const response = await this.api.post(`/kb/${domainId}/upload`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  }
+ async uploadKBFile(domainId: string, file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('tenantId', domainId)
+
+  const response = await this.api.post(`/kb/upload`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+}
+
 
   async deleteKBEntry(domainId: string, entryId: string) {
     const response = await this.api.delete(`/kb/${domainId}/entries/${entryId}`);

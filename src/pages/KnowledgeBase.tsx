@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect } from "react";
 import { apiService } from "../services/api";
@@ -5,9 +6,7 @@ import {
   Upload,
   Plus,
   Search,
-  Trash2,
   FileText,
-  Calendar,
   RefreshCw,
   Filter,
 } from "lucide-react";
@@ -67,30 +66,52 @@ const KnowledgeBase: React.FC = () => {
   };
 
   const fetchEntries = async (
-    domainId: string,
-    page = 1,
-    search = "",
-    type = ""
-  ) => {
-    if (!domainId) return;
+  domainId: string,
+  page = 1,
+  // search = "",
+  // type = ""
+) => {
+  if (!domainId) return;
 
-    try {
-      setLoading(true);
-      const response = await apiService.getKBEntries(domainId, {
-        page,
-        limit: 10,
-        search,
-        type,
-      });
-      setEntries(response.entries);
-      setTotalPages(response.totalPages);
-      setCurrentPage(response.currentPage);
-    } catch (error) {
-      console.error("Error fetching KB entries:", error);
-    } finally {
-      setLoading(false);
+  try {
+    setLoading(true);
+    const response = await apiService.getKBEntries(domainId);
+
+    let entries: KBEntry[] = [];
+
+    if (Array.isArray(response)) {
+      // Backend returned a simple array
+      entries = response.map((item: any) => ({
+        _id: item.id?.toString(),
+        type: "manual", // default since API doesn’t send it
+        question: item.title || "",
+        answer: item.content || "",
+        content: item.content || "",
+        source: "manual",
+        metadata: {},
+        status: "active",
+        createdAt: new Date().toISOString(),
+      }));
+      setTotalPages(1);
+      setCurrentPage(1);
+    } else {
+      // Backend returned paginated object
+      entries = response.entries || response.rows || [];
+      const total = response.total || response.count || entries.length;
+      setTotalPages(response.totalPages || Math.ceil(total / 10));
+      setCurrentPage(response.currentPage || page);
     }
-  };
+
+    setEntries(entries);
+  } catch (error) {
+    console.error("Error fetching KB entries:", error);
+    setEntries([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   useEffect(() => {
     fetchDomains();
@@ -98,14 +119,14 @@ const KnowledgeBase: React.FC = () => {
 
   useEffect(() => {
     if (selectedDomain) {
-      fetchEntries(selectedDomain, currentPage, searchTerm, typeFilter);
+      fetchEntries(selectedDomain, currentPage);
     }
   }, [selectedDomain, currentPage, searchTerm, typeFilter]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setCurrentPage(1);
-    fetchEntries(selectedDomain, 1, searchTerm, typeFilter);
+    fetchEntries(selectedDomain, 1);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -116,7 +137,7 @@ const KnowledgeBase: React.FC = () => {
       await apiService.createKBEntry(selectedDomain, formData);
       setShowModal(false);
       setFormData({ question: "", answer: "" });
-      fetchEntries(selectedDomain, currentPage, searchTerm, typeFilter);
+      fetchEntries(selectedDomain, currentPage);
     } catch (error) {
       console.error("Error creating KB entry:", error);
     }
@@ -131,7 +152,7 @@ const KnowledgeBase: React.FC = () => {
       await apiService.uploadKBFile(selectedDomain, uploadFile);
       setShowUploadModal(false);
       setUploadFile(null);
-      fetchEntries(selectedDomain, currentPage, searchTerm, typeFilter);
+      fetchEntries(selectedDomain, currentPage);
     } catch (error) {
       console.error("Error uploading file:", error);
     } finally {
@@ -148,26 +169,26 @@ const KnowledgeBase: React.FC = () => {
 
     try {
       await apiService.deleteKBEntry(selectedDomain, entryId);
-      fetchEntries(selectedDomain, currentPage, searchTerm, typeFilter);
+      fetchEntries(selectedDomain, currentPage);
     } catch (error) {
       console.error("Error deleting KB entry:", error);
     }
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "manual":
-        return "bg-blue-100 text-blue-800";
-      case "upload":
-        return "bg-green-100 text-green-800";
-      case "crawled":
-        return "bg-purple-100 text-purple-800";
-      case "faq":
-        return "bg-yellow-100 text-yellow-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  // const getTypeColor = (type: string) => {
+  //   switch (type) {
+  //     case "manual":
+  //       return "bg-blue-100 text-blue-800";
+  //     case "upload":
+  //       return "bg-green-100 text-green-800";
+  //     case "crawled":
+  //       return "bg-purple-100 text-purple-800";
+  //     case "faq":
+  //       return "bg-yellow-100 text-yellow-800";
+  //     default:
+  //       return "bg-gray-100 text-gray-800";
+  //   }
+  // };
 
   return (
     <div className="space-y-6">
@@ -230,8 +251,6 @@ const KnowledgeBase: React.FC = () => {
                 fetchEntries(
                   selectedDomain,
                   currentPage,
-                  searchTerm,
-                  typeFilter
                 )
               }
               disabled={!selectedDomain}
@@ -312,78 +331,43 @@ const KnowledgeBase: React.FC = () => {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {entries.map((entry) => (
-                    <tr key={entry._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(
-                            entry.type
-                          )}`}
-                        >
-                          {entry.type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="max-w-xs">
-                          {entry.question && (
-                            <div className="text-sm font-medium text-gray-900 mb-1">
-                              Q: {entry.question.substring(0, 100)}
-                              {entry.question.length > 100 && "..."}
-                            </div>
-                          )}
-                          <div className="text-sm text-gray-600">
-                            {entry.answer
-                              ? `A: ${entry.answer.substring(0, 150)}`
-                              : entry.content?.substring(0, 150) ||
-                                "No content"}
-                            {((entry.answer && entry.answer.length > 150) ||
-                              (entry.content && entry.content.length > 150)) &&
-                              "..."}
-                          </div>
-                          {/* {entry.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                            {entry.tags.map((tag, index) => {
-  console.log('Tag at index', index, ':', entry);
-  return (
-    <span
-      key={`${entry._id}-${tag}-${index}`} // unique per entry and per tag
-      className="inline-flex px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded"
-    >
-      {tag}
-    </span>
-  );
-})}
+             <tbody className="bg-white divide-y divide-gray-200">
+  {Array.isArray(entries) && entries.length > 0 ? (
+    entries.map((entry) => (
+      <tr key={entry._id}>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          {entry.type}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+          <div className="font-medium">{entry.question}</div>
+          <div className="text-gray-500">{entry.answer}</div>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          {entry.source}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+          {new Date(entry.createdAt).toLocaleDateString()}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+          <button
+            onClick={() => handleDelete(entry._id)}
+            className="text-red-600 hover:text-red-900"
+          >
+            Delete
+          </button>
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan={5} className="text-center py-4 text-gray-500">
+        No entries found
+      </td>
+    </tr>
+  )}
+</tbody>
 
 
-                            </div>
-                          )} */}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {entry.metadata?.filename ||
-                          entry.metadata?.url ||
-                          entry.source ||
-                          "Manual"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          {new Date(entry.createdAt).toLocaleDateString()}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => handleDelete(entry._id)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Delete Entry"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
               </table>
             </div>
 
