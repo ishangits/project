@@ -52,7 +52,7 @@ class ApiService {
 
   // Domain endpoints
   async getDomains(params?: any) {
-    const response = await this.api.get('/domains', { params });
+    const response = await this.api.get('/tenants', { params });
     return response.data;
   }
 
@@ -62,14 +62,21 @@ class ApiService {
   }
 
   async createDomain(data: any) {
-    const response = await this.api.post('/domains', data);
+    const response = await this.api.post('/tenants', data);
     return response.data;
   }
 
-  async updateDomain(id: string, data: any) {
-    const response = await this.api.put(`/domains/${id}`, data);
-    return response.data;
-  }
+// api.ts
+async trainModel(payload: { tenantId: string }) {
+  const response = await this.api.post(`/train`, payload);
+  return response.data;
+}
+
+ async updateDomain(data: any) {
+  const response = await this.api.post(`/tenants`, data);  // just `/tenants`
+  return response.data;
+}
+
 
   async deleteDomain(id: string) {
     const response = await this.api.delete(`/domains/${id}`);
@@ -87,10 +94,19 @@ class ApiService {
     return response.data;
   }
 
-  async createKBEntry(domainId: string, data: any) {
-    const response = await this.api.post(`/kb/${domainId}/manual`, data);
-    return response.data;
-  }
+ async createKBEntry(domainId: string, data: { question: string; answer: string; tags?: string }) {
+  // map question → title, answer → content
+  const payload = {
+    tenantId: domainId,
+    title: data.question,
+    content: data.answer,
+    // tags: data.tags ? data.tags.split(',').map(tag => tag.trim()) : []
+  };
+
+  const response = await this.api.post(`/kb`, payload);
+  return response.data;
+}
+
 
   async uploadKBFile(domainId: string, file: File) {
     const formData = new FormData();

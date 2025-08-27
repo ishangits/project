@@ -80,35 +80,28 @@ router.get('/:domainId', authenticateToken, async (req, res) => {
 });
 
 // ==================== CREATE MANUAL KB ENTRY ====================
-router.post('/:domainId/manual', authenticateToken, async (req, res) => {
-  try {
-    const { question, answer, tags } = req.body;
-    const { domainId } = req.params;
 
-    if (!question || !answer) {
-      return res.status(400).json({ message: "Question and answer are required" });
+router.post("/", async (req, res) => {
+  try {
+    const { tenantId, title, content } = req.body;
+
+    if (!tenantId || !title || !content) {
+      return res.status(400).json({ error: "tenantId, title, and content are required" });
     }
 
-    const entry = await KnowledgeBaseEntry.create({
-      domainId,
-      type: "manual",
-      question,
-      answer,
-      tags: tags ? tags.split(",").map(tag => tag.trim()) : [],
+    const payload = { tenantId, title, content };
+    const response = await axios.post(`${process.env.TENANT_API_BASE}/api/kb/`, payload, {
+      headers: { "X-API-Key": process.env.TENANT_API_KEY }
     });
 
-    // Update domain’s KB timestamp
-    await Domain.update(
-      { kbSettings: { lastUpdated: new Date() } },
-      { where: { id: domainId } }
-    );
-
-    res.status(201).json(entry);
+    res.json(response.data);
   } catch (error) {
-    console.error("Create manual KB entry error:", error);
-    res.status(500).json({ message: "Error creating KB entry" });
+    console.error("Error creating KB entry:", error);
+    res.status(500).json({ error: "Failed to create KB entry" });
   }
 });
+
+
 
 // ==================== UPLOAD KB FILE ====================
 router.post('/:domainId/upload', authenticateToken, upload.single('file'), async (req, res) => {
