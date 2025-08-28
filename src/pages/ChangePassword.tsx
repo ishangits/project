@@ -36,7 +36,6 @@ const handleSubmit = async (e: FormEvent) => {
     setConfirmPassword("");
     setTimeout(() => navigate("/dashboard"), 1500);
   } catch (err: any) {
-    debugger;
     setError(err.response?.data?.message || "Password change failed");
   } finally {
     setLoading(false);
