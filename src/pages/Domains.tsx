@@ -11,6 +11,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+
 interface Domain {
   id: string;
   openAIKey: string;
@@ -39,6 +40,7 @@ const Domains: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showModal, setShowModal] = useState(false);
+  const [training, setTraining] = useState(false);
   const [editingDomain, setEditingDomain] = useState<Domain | null>(null);
   const [formData, setFormData] = useState({
     id: "",
@@ -124,16 +126,36 @@ const Domains: React.FC = () => {
 };
 
 
+
+// add new state at top of component
+
 const handleTrainModel = async (domainId: string) => {
+  const TIMEOUT = 30000; // 30 sec
+  setTraining(true);
+
   try {
-    const response = await apiService.trainModel({ tenantId: domainId });
+    // Create a timeout promise
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Request timed out")), TIMEOUT)
+    );
+
+    // Race API call with timeout
+    const response = await Promise.race([
+      apiService.trainModel({ tenantId: domainId }),
+      timeoutPromise,
+    ]);
+
     console.log("Training started:", response);
     alert("Training started successfully!");
   } catch (error: any) {
     console.error("Failed to start training:", error);
-    alert(error.response?.data?.message || "Failed to start training");
+    alert(error.message || error.response?.data?.message || "Failed to start training");
+  } finally {
+    setTraining(false);
   }
 };
+
+
   const handleEdit = (domain: Domain) => {
     setEditingDomain(domain);
     setFormData({
@@ -360,6 +382,13 @@ const handleTrainModel = async (domainId: string) => {
               </table>
             </div>
 
+{training && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+    <div className="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent"></div>
+    <span className="ml-4 text-white font-medium">Training in progress...</span>
+  </div>
+)}
+
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
@@ -407,7 +436,7 @@ const handleTrainModel = async (domainId: string) => {
                   required
                   value={formData.name}
                   onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
+                    setFormData({ ...formData, name: e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1), })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter name"

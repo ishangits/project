@@ -95,6 +95,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 {admin?.name}
               </p>
               <p className="text-xs text-gray-500 truncate">{admin?.email}</p>
+                {/* Change Password Link */}
+      <Link
+        to="/change-password"
+        className="text-blue-600 hover:text-blue-800 text-xs mt-1 block"
+      >
+        Change Password
+      </Link>
             </div>
            <button
   onClick={handleLogout}

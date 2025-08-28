@@ -8,6 +8,7 @@ import KnowledgeBase from './pages/KnowledgeBase';
 import TokenUsage from './pages/TokenUsage';
 import Reports from './pages/Reports';
 import Domains from './pages/Domains';
+import ChangePassword from './pages/ChangePassword';
 
 function App() {
   return (
@@ -26,6 +27,17 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+  path="/change-password"
+  element={
+    <ProtectedRoute>
+      <Layout>
+        <ChangePassword />
+      </Layout>
+    </ProtectedRoute>
+  }
+/>
+
           <Route
             path="/domains"
             element={

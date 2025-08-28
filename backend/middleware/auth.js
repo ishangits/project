@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
-import Admin from '../models/Admin.js';
 
-export const authenticateToken = async (req, res, next) => {
+export const authenticateToken = (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
@@ -10,21 +9,24 @@ export const authenticateToken = async (req, res, next) => {
       return res.status(401).json({ message: 'Access token required' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Decode external token (without verifying signature)
+    const decoded = jwt.decode(token);
 
-    // Sequelize: find by primary key, exclude password
-    const admin = await Admin.findByPk(decoded.adminId, {
-      attributes: { exclude: ['password'] }
-    });
-
-    if (!admin) {
-      return res.status(401).json({ message: 'Invalid token' });
+    if (!decoded) {
+      return res.status(403).json({ message: 'Invalid token' });
     }
 
-    req.admin = admin; // attach admin object to request
+    // Attach payload to req.admin
+    req.admin = {
+      id: decoded.id || decoded.adminId,
+      email: decoded.email,
+      role: decoded.role || 'super-admin', // fallback if role not in token
+    };
+
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
     return res.status(403).json({ message: 'Invalid or expired token' });
   }
 };
+

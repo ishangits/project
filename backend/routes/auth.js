@@ -2,7 +2,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import Admin from '../models/Admin.js';
 import { authenticateToken } from '../middleware/auth.js';
-
+import axios from "axios";
 const router = express.Router();
 
 // Admin login
@@ -14,58 +14,64 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const admin = await Admin.findOne({ where: { email: email.toLowerCase() } });
-
-    if (!admin) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-
-    const isPasswordValid = await admin.comparePassword(password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-
-    // Update last login
-    await admin.update({ lastLogin: new Date() });
-
-    const token = jwt.sign(
-      { adminId: admin.id, email: admin.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+    // Forward credentials to external tenant service
+    const response = await axios.post(
+      `${process.env.TENANT_API_BASE}/api/admin/admin-login/`,
+      { email, password },
+      {
+        headers: { 
+          'X-API-Key': process.env.TENANT_API_KEY,
+          'Content-Type': 'application/json'
+        }
+      }
     );
 
-    res.json({
-      token,
-      admin: {
-        id: admin.id,
-        email: admin.email,
-        name: admin.name,
-        role: admin.role,
-        lastLogin: admin.lastLogin
-      }
-    });
+    // Just return whatever external API sends (usually token + admin info)
+    res.json(response.data);
+
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error during login' });
+    console.error('External login failed:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json(
+      error.response?.data || { message: 'Login failed' }
+    );
   }
 });
 
+
 // Verify token
 router.get('/verify', authenticateToken, (req, res) => {
-  res.json({
-    admin: {
-      id: req.admin.id,
-      email: req.admin.email,
-      name: req.admin.name,
-      role: req.admin.role,
-      lastLogin: req.admin.lastLogin
-    }
-  });
+  res.json({ admin: req.admin });
 });
 
 // Logout (client-side token removal, optionally log it)
 router.post('/logout', authenticateToken, (req, res) => {
   res.json({ message: 'Logged out successfully' });
 });
+// Change password
+router.post('/change-password', authenticateToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  try {
+    const response = await axios.post(
+      `${process.env.TENANT_API_BASE}/api/admin/change-password/`,
+      { oldPassword: currentPassword, newPassword },
+      {
+        headers: {
+          'Authorization': `Basic ${process.env.TENANT_API_KEY}`, // tenant key
+          'token': req.headers['authorization']?.split(' ')[1],   // JWT from client
+          'Content-Type': 'application/json'
+        },
+      }
+    );
+
+    res.json(response.data);
+  } catch (error) {
+    console.error('External change-password failed:', error.response?.data || error.message);
+    res.status(error.response?.status || 500).json(
+      error.response?.data || { message: 'Change password failed' }
+    );
+  }
+});
+
 
 export default router;

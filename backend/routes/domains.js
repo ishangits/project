@@ -14,7 +14,7 @@ const router = express.Router();
 // ✅ Get all domains with pagination + search
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { page = 1, limit = 10, search = '', sortBy = 'name', sortOrder = 'DESC' } = req.query;
+    const { page = 1, limit = 10, search = '', sortBy = 'createdAt', sortOrder = 'DESC' } = req.query;
     const offset = (page - 1) * limit;
 
     // External tenants API
@@ -39,15 +39,25 @@ router.get('/', authenticateToken, async (req, res) => {
     });
 
     // Sorting
-    filtered.sort((a, b) => {
-      const aVal = a[sortBy] ?? '';
-      const bVal = b[sortBy] ?? '';
-      if (sortOrder.toUpperCase() === 'ASC') {
-        return aVal > bVal ? 1 : -1;
-      } else {
-        return aVal < bVal ? 1 : -1;
-      }
-    });
+  filtered.sort((a, b) => {
+  let aVal = a[sortBy];
+  let bVal = b[sortBy];
+
+  if (sortBy === 'createdAt') {
+    aVal = aVal ? new Date(aVal).getTime() : 0;
+    bVal = bVal ? new Date(bVal).getTime() : 0;
+  } else {
+    aVal = aVal || '';
+    bVal = bVal || '';
+  }
+
+  if (sortOrder.toUpperCase() === 'ASC') {
+    return aVal > bVal ? 1 : -1;
+  } else {
+    return aVal < bVal ? 1 : -1;
+  }
+});
+
 
     // Pagination
     const paginated = filtered.slice(offset, offset + parseInt(limit));

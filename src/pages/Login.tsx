@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Settings, Eye, EyeOff, Building2, Bot } from 'lucide-react';
+import { Eye, EyeOff, Bot } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');

@@ -49,6 +49,19 @@ class ApiService {
     const response = await this.api.post('/auth/logout');
     return response.data;
   }
+// Auth endpoints
+async changePassword(currentPassword: string, newPassword: string) {
+  if (!this.api.defaults.headers.common['Authorization']) {
+    throw new Error('Not authenticated');
+  }
+
+  const response = await this.api.post('/auth/change-password', {
+    currentPassword,
+    newPassword,
+  });
+
+  return response.data;
+}
 
   // Domain endpoints
   async getDomains(params?: any) {

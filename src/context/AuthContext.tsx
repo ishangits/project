@@ -1,3 +1,5 @@
+/* eslint-disable no-useless-catch */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiService } from '../services/api';
 
@@ -14,6 +16,7 @@ interface AuthContextType {
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -36,36 +39,58 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
+  // Initialize auth from localStorage
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = localStorage.getItem('token');
-      if (storedToken) {
-        try {
+      try {
+        const storedToken = localStorage.getItem('token');
+        const storedEmail = localStorage.getItem('email');
+
+        if (storedToken && storedEmail) {
           apiService.setAuthToken(storedToken);
-          const response = await apiService.verifyToken();
-          setAdmin(response.admin);
+          setAdmin({
+            id: '1', // placeholder
+            email: storedEmail,
+            name: 'External Admin',
+            role: 'super-admin',
+            lastLogin: new Date().toISOString(),
+          });
           setToken(storedToken);
-        } catch (error) {
-          console.error('Token verification failed:', error);
-          localStorage.removeItem('token');
-          apiService.clearAuthToken();
         }
+      } catch (error) {
+        console.error('Failed to initialize auth:', error);
+        localStorage.removeItem('token');
+        localStorage.removeItem('email');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     initAuth();
   }, []);
 
   const login = async (email: string, password: string): Promise<void> => {
+    setLoading(true);
     try {
       const response = await apiService.login(email, password);
-      setAdmin(response.admin);
+
+      const adminData: Admin = {
+        id: '1', // placeholder
+        email: response.email,
+        name: 'External Admin',
+        role: 'super-admin',
+        lastLogin: new Date().toISOString(),
+      };
+
+      setAdmin(adminData);
       setToken(response.token);
       localStorage.setItem('token', response.token);
+      localStorage.setItem('email', response.email);
       apiService.setAuthToken(response.token);
     } catch (error) {
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,7 +98,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setAdmin(null);
     setToken(null);
     localStorage.removeItem('token');
+    localStorage.removeItem('email');
     apiService.clearAuthToken();
+  };
+
+  const changePassword = async (oldPassword: string, newPassword: string) => {
+    try {
+      await apiService.changePassword(oldPassword, newPassword);
+    } catch (error) {
+      throw error;
+    }
   };
 
   const value: AuthContextType = {
@@ -81,6 +115,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     token,
     login,
     logout,
+    changePassword,
     loading,
   };
 
