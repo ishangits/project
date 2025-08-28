@@ -1,8 +1,8 @@
 // routes/domains.js
 import express from 'express';
-import { Op } from 'sequelize';
-import Domain from '../models/Domain.js';
-import TokenUsageLog from '../models/TokenUsageLog.js';
+// import { Op } from 'sequelize';
+// import Domain from '../models/Domain.js';
+// import TokenUsageLog from '../models/TokenUsageLog.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { maskKey } from '../utils/mask.js';
 import axios from 'axios';
@@ -226,23 +226,23 @@ router.post("/update", authenticateToken, async (req, res) => {
 });
 
 // DELETE /domains/:id
-router.delete('/:id', async (req, res) => {
-  try {
-    const { id } = req.params; // ✅ get id
-    const deleted = await Domain.destroy({
-      where: { id }, // ✅ match by custom id
-    });
+// router.delete('/:id', async (req, res) => {
+//   try {
+//     const { id } = req.params; // ✅ get id
+//     const deleted = await Domain.destroy({
+//       where: { id }, // ✅ match by custom id
+//     });
 
-    if (deleted) {
-      return res.json({ message: 'Domain deleted successfully' });
-    }
+//     if (deleted) {
+//       return res.json({ message: 'Domain deleted successfully' });
+//     }
 
-    res.status(404).json({ error: 'Domain not found' });
-  } catch (error) {
-    console.error('Error deleting domain:', error);
-    res.status(500).json({ error: 'Failed to delete domain' });
-  }
-});
+//     res.status(404).json({ error: 'Domain not found' });
+//   } catch (error) {
+//     console.error('Error deleting domain:', error);
+//     res.status(500).json({ error: 'Failed to delete domain' });
+//   }
+// });
 
 // router.post('/:id/reveal-key', authenticateToken, async (req, res) => {
 //   try {
@@ -260,20 +260,20 @@ router.delete('/:id', async (req, res) => {
 
 
 // ✅ Update KB timestamp
-router.post('/:id/kb-update', authenticateToken, async (req, res) => {
-  try {
-    const domain = await Domain.findByPk(req.params.id);
-    if (!domain) return res.status(404).json({ message: 'Domain not found' });
+// router.post('/:id/kb-update', authenticateToken, async (req, res) => {
+//   try {
+//     const domain = await Domain.findByPk(req.params.id);
+//     if (!domain) return res.status(404).json({ message: 'Domain not found' });
 
-    await domain.update({
-      kbSettings: { ...domain.kbSettings, lastUpdated: new Date() },
-    });
+//     await domain.update({
+//       kbSettings: { ...domain.kbSettings, lastUpdated: new Date() },
+//     });
 
-    res.json({ message: 'KB updated successfully', domain });
-  } catch (error) {
-    console.error('KB update error:', error);
-    res.status(500).json({ message: 'Error updating KB' });
-  }
-});
+//     res.json({ message: 'KB updated successfully', domain });
+//   } catch (error) {
+//     console.error('KB update error:', error);
+//     res.status(500).json({ message: 'Error updating KB' });
+//   }
+// });
 
 export default router;

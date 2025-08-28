@@ -3,8 +3,8 @@ import multer from 'multer';
 import csv from 'csv-parser';
 import xlsx from 'xlsx';
 import fs from 'fs';
-import KnowledgeBaseEntry from '../models/KnowledgeBaseEntry.js';
-import Domain from '../models/Domain.js';
+// import KnowledgeBaseEntry from '../models/KnowledgeBaseEntry.js';
+// import Domain from '../models/Domain.js';
 import { authenticateToken } from '../middleware/auth.js';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
@@ -153,24 +153,24 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
 
 
 // Delete KB entry
-router.delete('/:domainId/entries/:entryId', authenticateToken, async (req, res) => {
-  try {
-    const { domainId, entryId } = req.params;
+// router.delete('/:domainId/entries/:entryId', authenticateToken, async (req, res) => {
+//   try {
+//     const { domainId, entryId } = req.params;
 
-    const deleted = await KnowledgeBaseEntry.destroy({
-      where: { id: entryId, domainId }
-    });
+//     const deleted = await KnowledgeBaseEntry.destroy({
+//       where: { id: entryId, domainId }
+//     });
 
-    if (!deleted) {
-      return res.status(404).json({ message: "KB entry not found" });
-    }
+//     if (!deleted) {
+//       return res.status(404).json({ message: "KB entry not found" });
+//     }
 
-    res.json({ message: "KB entry deleted successfully" });
-  } catch (error) {
-    console.error("Delete KB entry error:", error);
-    res.status(500).json({ message: "Error deleting KB entry" });
-  }
-});
+//     res.json({ message: "KB entry deleted successfully" });
+//   } catch (error) {
+//     console.error("Delete KB entry error:", error);
+//     res.status(500).json({ message: "Error deleting KB entry" });
+//   }
+// });
 
 // Crawl domain
 // router.post('/:domainId/crawl', authenticateToken, async (req, res) => {

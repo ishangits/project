@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { connectDB, sequelize } from './config/database.js';
+// import { connectDB, sequelize } from './config/database.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -18,7 +18,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Connect to MySQL
-connectDB();
+// connectDB();
 
 // Middleware
 app.use(cors());
@@ -47,12 +47,12 @@ app.use((err, req, res, next) => {
 });
 
 // Sync Sequelize models & start server
-sequelize.sync({ alter: false }) // alter: true updates tables to match models
-  .then(() => {
+// sequelize.sync({ alter: false }) // alter: true updates tables to match models
+//   .then(() => {
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
-  })
-  .catch((err) => {
-    console.error('Failed to sync database:', err);
-  });
+  // })
+  // .catch((err) => {
+  //   console.error('Failed to sync database:', err);
+  // });

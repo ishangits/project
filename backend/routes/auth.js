@@ -1,6 +1,6 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import Admin from '../models/Admin.js';
+// import Admin from '../models/Admin.js';
 import { authenticateToken } from '../middleware/auth.js';
 import axios from "axios";
 const router = express.Router();

@@ -3,40 +3,56 @@ import fs from 'fs';
 import path from 'path';
 import createCsvWriter from 'csv-writer';
 import jsPDF from 'jspdf';
-import { Op } from 'sequelize';
-import TokenUsageLog from '../models/TokenUsageLog.js';
-import Domain from '../models/Domain.js';
+import { format, subDays } from 'date-fns';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Generate CSV report
+// Demo domains
+const demoDomains = [
+  { id: '1', name: 'Alpha', url: 'alpha.com', domainId: '1' },
+  { id: '2', name: 'Beta', url: 'beta.com', domainId: '2' },
+  { id: '3', name: 'Gamma', url: 'gamma.com', domainId: '3' },
+];
+
+// Demo token logs
+const demoLogs = [];
+for (let i = 0; i < 50; i++) {
+  const domain = demoDomains[i % demoDomains.length];
+  demoLogs.push({
+    id: i + 1,
+    domain,
+    date: subDays(new Date(), i % 30),
+    tokensUsed: Math.floor(Math.random() * 500) + 50,
+    requestType: ['chat', 'kb_update', 'training', 'crawl'][i % 4],
+    cost: parseFloat((Math.random() * 5).toFixed(4)),
+    metadata: {
+      userQuery: `Query ${i + 1}`,
+      responseLength: Math.floor(Math.random() * 1000),
+      sessionId: `sess_${i + 1}`,
+      model: 'gpt-3.5-turbo',
+    },
+  });
+}
+
+// CSV report
 router.get('/csv', authenticateToken, async (req, res) => {
   try {
     const { domainId, startDate, endDate } = req.query;
+    let filtered = demoLogs;
 
-    const where = {};
-    if (domainId) where.domainId = domainId;
-    if (startDate || endDate) {
-      where.date = {};
-      if (startDate) where.date[Op.gte] = new Date(startDate);
-      if (endDate) where.date[Op.lte] = new Date(endDate);
-    }
+    if (domainId) filtered = filtered.filter(log => log.domain.id === domainId);
+    if (startDate) filtered = filtered.filter(log => log.date >= new Date(startDate));
+    if (endDate) filtered = filtered.filter(log => log.date <= new Date(endDate));
 
-    const logs = await TokenUsageLog.findAll({
-      where,
-      include: [{ model: Domain, attributes: ['name', 'domainId', 'url'] }],
-      order: [['date', 'DESC']]
-    });
-
-    const csvData = logs.map(log => ({
-      date: log.date.toISOString().split('T')[0],
-      domain: log.Domain.name,
-      domainId: log.Domain.domainId,
+    const csvData = filtered.map(log => ({
+      date: format(log.date, 'yyyy-MM-dd'),
+      domain: log.domain.name,
+      domainId: log.domain.domainId,
       tokensUsed: log.tokensUsed,
       requestType: log.requestType,
       cost: log.cost.toFixed(4),
-      model: log.metadata?.model || 'N/A'
+      model: log.metadata.model
     }));
 
     const filename = `token-usage-report-${Date.now()}.csv`;
@@ -57,54 +73,39 @@ router.get('/csv', authenticateToken, async (req, res) => {
     });
 
     await csvWriter.writeRecords(csvData);
-
-    res.download(filepath, filename, (err) => {
-      if (err) console.error('Download error:', err);
-      fs.unlink(filepath, unlinkErr => { if (unlinkErr) console.error('File cleanup error:', unlinkErr); });
-    });
-
-  } catch (error) {
-    console.error('CSV report error:', error);
+    res.download(filepath, filename, () => fs.unlinkSync(filepath));
+  } catch (err) {
+    console.error('CSV report error:', err);
     res.status(500).json({ message: 'Error generating CSV report' });
   }
 });
 
-// Generate PDF report
+// PDF report
 router.get('/pdf', authenticateToken, async (req, res) => {
   try {
     const { domainId, startDate, endDate } = req.query;
+    let filtered = demoLogs;
 
-    const where = {};
-    if (domainId) where.domainId = domainId;
-    if (startDate || endDate) {
-      where.date = {};
-      if (startDate) where.date[Op.gte] = new Date(startDate);
-      if (endDate) where.date[Op.lte] = new Date(endDate);
-    }
+    if (domainId) filtered = filtered.filter(log => log.domain.id === domainId);
+    if (startDate) filtered = filtered.filter(log => log.date >= new Date(startDate));
+    if (endDate) filtered = filtered.filter(log => log.date <= new Date(endDate));
 
-    const logs = await TokenUsageLog.findAll({
-      where,
-      include: [{ model: Domain, attributes: ['name', 'domainId', 'url'] }],
-      order: [['date', 'DESC']]
-    });
-
-    const totalTokens = logs.reduce((sum, log) => sum + log.tokensUsed, 0);
-    const totalCost = logs.reduce((sum, log) => sum + log.cost, 0);
-    const totalRequests = logs.length;
+    const totalTokens = filtered.reduce((sum, log) => sum + log.tokensUsed, 0);
+    const totalCost = filtered.reduce((sum, log) => sum + log.cost, 0);
+    const totalRequests = filtered.length;
 
     const doc = new jsPDF();
     doc.setFontSize(20);
     doc.text('Token Usage Report', 20, 30);
 
-    const dateRange = `${startDate || 'All'} to ${endDate || 'All'}`;
     doc.setFontSize(12);
-    doc.text(`Period: ${dateRange}`, 20, 45);
+    doc.text(`Period: ${startDate || 'All'} to ${endDate || 'All'}`, 20, 45);
 
     doc.setFontSize(14);
     doc.text('Summary', 20, 65);
     doc.setFontSize(10);
     doc.text(`Total Requests: ${totalRequests}`, 20, 80);
-    doc.text(`Total Tokens: ${totalTokens.toLocaleString()}`, 20, 90);
+    doc.text(`Total Tokens: ${totalTokens}`, 20, 90);
     doc.text(`Total Cost: $${totalCost.toFixed(4)}`, 20, 100);
 
     let y = 120;
@@ -112,8 +113,8 @@ router.get('/pdf', authenticateToken, async (req, res) => {
     doc.text('Recent Usage', 20, y);
     y += 15;
     doc.setFontSize(8);
-    logs.slice(0, 20).forEach(log => {
-      const line = `${log.date.toLocaleDateString()} - ${log.Domain.name} - ${log.tokensUsed} tokens - $${log.cost.toFixed(4)}`;
+    filtered.slice(0, 20).forEach(log => {
+      const line = `${format(log.date, 'yyyy-MM-dd')} - ${log.domain.name} - ${log.tokensUsed} tokens - $${log.cost.toFixed(4)}`;
       doc.text(line, 20, y);
       y += 10;
       if (y > 280) { doc.addPage(); y = 20; }
@@ -124,30 +125,21 @@ router.get('/pdf', authenticateToken, async (req, res) => {
     if (!fs.existsSync('temp')) fs.mkdirSync('temp', { recursive: true });
 
     doc.save(filepath);
-    res.download(filepath, filename, (err) => {
-      if (err) console.error('Download error:', err);
-      setTimeout(() => { fs.unlink(filepath, unlinkErr => { if (unlinkErr) console.error('File cleanup error:', unlinkErr); }); }, 1000);
-    });
-
-  } catch (error) {
-    console.error('PDF report error:', error);
+    res.download(filepath, filename, () => fs.unlinkSync(filepath));
+  } catch (err) {
+    console.error('PDF report error:', err);
     res.status(500).json({ message: 'Error generating PDF report' });
   }
 });
 
-// Generate invoice (placeholder)
-router.post('/invoice', authenticateToken, async (req, res) => {
-  try {
-    const { domainId, startDate, endDate, invoiceNumber } = req.body;
-    res.json({ 
-      message: 'Invoice generated successfully (placeholder)', 
-      invoiceNumber: invoiceNumber || `INV-${Date.now()}`,
-      generatedAt: new Date()
-    });
-  } catch (error) {
-    console.error('Generate invoice error:', error);
-    res.status(500).json({ message: 'Error generating invoice' });
-  }
+// Invoice placeholder
+router.post('/invoice', authenticateToken, (req, res) => {
+  const { invoiceNumber } = req.body;
+  res.json({
+    message: 'Invoice generated successfully (placeholder)',
+    invoiceNumber: invoiceNumber || `INV-${Date.now()}`,
+    generatedAt: new Date()
+  });
 });
 
 export default router;
