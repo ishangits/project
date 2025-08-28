@@ -160,20 +160,20 @@ const KnowledgeBase: React.FC = () => {
     }
   };
 
-  const handleDelete = async (entryId: string) => {
-    if (
-      !selectedDomain ||
-      !window.confirm("Are you sure you want to delete this entry?")
-    )
-      return;
+  // const handleDelete = async (entryId: string) => {
+  //   if (
+  //     !selectedDomain ||
+  //     !window.confirm("Are you sure you want to delete this entry?")
+  //   )
+  //     return;
 
-    try {
-      await apiService.deleteKBEntry(selectedDomain, entryId);
-      fetchEntries(selectedDomain, currentPage);
-    } catch (error) {
-      console.error("Error deleting KB entry:", error);
-    }
-  };
+  //   try {
+  //     await apiService.deleteKBEntry(selectedDomain, entryId);
+  //     fetchEntries(selectedDomain, currentPage);
+  //   } catch (error) {
+  //     console.error("Error deleting KB entry:", error);
+  //   }
+  // };
 
   // const getTypeColor = (type: string) => {
   //   switch (type) {
@@ -326,9 +326,9 @@ const KnowledgeBase: React.FC = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Created
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
-                    </th>
+                    </th> */}
                   </tr>
                 </thead>
              <tbody className="bg-white divide-y divide-gray-200">
@@ -348,14 +348,14 @@ const KnowledgeBase: React.FC = () => {
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
           {new Date(entry.createdAt).toLocaleDateString()}
         </td>
-        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        {/* <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
           <button
             onClick={() => handleDelete(entry._id)}
             className="text-red-600 hover:text-red-900"
           >
             Delete
           </button>
-        </td>
+        </td> */}
       </tr>
     ))
   ) : (
@@ -493,7 +493,7 @@ const KnowledgeBase: React.FC = () => {
             <form onSubmit={handleFileUpload} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Select File (CSV or Excel/PDF)
+                  Select File (CSV or Excel)
                 </label>
                 <input
                   type="file"

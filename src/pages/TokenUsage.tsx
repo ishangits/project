@@ -3,14 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import {
-  Calendar,
   Search,
-  Filter,
   Download,
   DollarSign,
   Activity,
   TrendingUp,
-  BarChart3
 } from 'lucide-react';
 import {
   Chart as ChartJS,

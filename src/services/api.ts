@@ -5,8 +5,10 @@ class ApiService {
   private api: AxiosInstance;
 
   constructor() {
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
     this.api = axios.create({
-      baseURL: 'http://localhost:5000/api',
+      baseURL,
       headers: {
         'Content-Type': 'application/json',
       },
