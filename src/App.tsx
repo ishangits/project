@@ -9,6 +9,8 @@ import TokenUsage from './pages/TokenUsage';
 import Reports from './pages/Reports';
 import Domains from './pages/Domains';
 import ChangePassword from './pages/ChangePassword';
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
   return (
@@ -80,6 +82,8 @@ function App() {
           />
         </Routes>
       </Router>
+            <ToastContainer position="top-right" autoClose={3000} />
+
     </AuthProvider>
   );
 }

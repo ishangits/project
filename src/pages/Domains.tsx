@@ -8,23 +8,23 @@ import {
   ExternalLink,
   Globe,
   Calendar,
-  RefreshCw,
 } from "lucide-react";
+ import { toast } from "react-toastify";
 
 
 interface Domain {
   id: string;
-  openAIKey: string;
+  openai_api_key: string;
   name: string;
-  url: string;
+  domain: string;
   domainId: string;
   apiEndpoint: string;
   authToken: string;
-  dbHost: string;
+  dbIP: string;
   dbPort: string;
-  dbUser: string;
-  dbPassword: string;
-  dbDatabase: string;
+  dbUserName: string;
+  dbPass: string;
+  dbName: string;
   kbSettings: {
     lastUpdated: string | null;
     autoUpdate: boolean;
@@ -43,15 +43,15 @@ const Domains: React.FC = () => {
   const [training, setTraining] = useState(false);
   const [editingDomain, setEditingDomain] = useState<Domain | null>(null);
   const [formData, setFormData] = useState({
-    id: "",
+    id: "", // use this instead of 'id'
     name: "",
-    url: "",
-    openAIKey: "",
-    dbHost: "",
-    dbPort: "",
-    dbUser: "",
-    dbPassword: "",
-    dbDatabase: "",
+    domain: "", // maps to 'domain'
+    openai_api_key: "", // maps to 'openai_api_key'
+    dbIP: "", // maps to 'dbIP'
+    dbPort: "", // maps to 'dbPort'
+    dbUserName: "", // maps to 'dbUserName'
+    dbPass: "", // maps to 'dbPass'
+    dbName: "", // maps to 'dbName'
     status: "active",
   });
 
@@ -65,9 +65,9 @@ const Domains: React.FC = () => {
         sortBy: "createdAt",
         sortOrder: "desc",
       });
-      setDomains(response.domains);
+      setDomains(response.tenants);
       setTotalPages(response.totalPages);
-      setCurrentPage(response.currentPage);
+      setCurrentPage(response.currentPage || page);
     } catch (error) {
       console.error("Error fetching domains:", error);
     } finally {
@@ -84,25 +84,29 @@ const Domains: React.FC = () => {
     setCurrentPage(1);
     fetchDomains(1, searchTerm);
   };
- const handleSubmit = async (e: React.FormEvent) => {
+
+const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
   try {
-    if (editingDomain) {
-        console.log("Edit called", editingDomain)
+    const payload: any = {
+      name: formData.name || "",
+      domain: formData.domain || "",
+      status: formData.status || "active",
+      dbIP: formData.dbIP || "",
+      dbPort: Number(formData.dbPort) || 3306,
+      dbUserName: formData.dbUserName || "",
+      dbPass: formData.dbPass || "",
+      dbName: formData.dbName || "",
+      apiKey: formData.openai_api_key || "",
+    };
 
-      await apiService.updateDomain({
-        tenantId: editingDomain.id, // use domain ID
-        name: formData.name,
-        url: formData.url,
-        status: formData.status,
-        dbHost: formData.dbHost,
-  dbPort: Number(formData.dbPort), 
-        dbUser: formData.dbUser,
-        dbPassword: formData.dbPassword,
-        dbDatabase: formData.dbDatabase,
-      });
+    if (editingDomain) {
+      payload.id = formData.id; // include id only for update
+      await apiService.updateDomain(payload);
+      toast.success("Domain updated successfully!");
     } else {
-      await apiService.createDomain(formData);
+      await apiService.createDomain(payload); // id is NOT sent here
+      toast.success("Domain created successfully!");
     }
 
     setShowModal(false);
@@ -110,38 +114,39 @@ const Domains: React.FC = () => {
     setFormData({
       id: "",
       name: "",
-      url: "",
-      openAIKey: "",
-      dbHost: "",
+      domain: "",
+      openai_api_key: "",
+      dbIP: "",
       dbPort: "",
-      dbUser: "",
-      dbPassword: "",
-      dbDatabase: "",
+      dbUserName: "",
+      dbPass: "",
+      dbName: "",
       status: "active",
     });
     fetchDomains(currentPage, searchTerm);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error saving domain:", error);
+    toast.error(error?.response?.data?.message || "Failed to save domain");
   }
 };
 
 
-
-// add new state at top of component
-
-const handleTrainModel = async (domainId: string) => {
+  const handleTrainModel = async (domainId: string) => {
   const TIMEOUT = 30000; // 30 sec
   setTraining(true);
 
   try {
-    // Create a timeout promise
+    const token = localStorage.getItem("token"); // your tenant JWT
+    if (!token) throw new Error("You are not logged in");
+
+    // Timeout promise
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error("Request timed out")), TIMEOUT)
     );
 
     // Race API call with timeout
     const response = await Promise.race([
-      apiService.trainModel({ tenantId: domainId }),
+      apiService.trainModel({ tenantId: domainId }, token),
       timeoutPromise,
     ]);
 
@@ -149,26 +154,29 @@ const handleTrainModel = async (domainId: string) => {
     alert("Training started successfully!");
   } catch (error: any) {
     console.error("Failed to start training:", error);
-    alert(error.message || error.response?.data?.message || "Failed to start training");
+    alert(
+      error.message ||
+        error.response?.data?.message ||
+        "Failed to start training"
+    );
   } finally {
     setTraining(false);
   }
 };
-
 
   const handleEdit = (domain: Domain) => {
     setEditingDomain(domain);
     setFormData({
       id: domain.id,
       name: domain.name,
-      url: domain.url,
+      domain: domain.domain,
       status: domain.status,
-      openAIKey: domain.openAIKey,
-      dbHost: domain.dbHost || "",
+      openai_api_key: domain.openai_api_key,
+      dbIP: domain.dbIP || "",
       dbPort: domain.dbPort || "",
-      dbUser: domain.dbUser || "",
-      dbPassword: domain.dbPassword || "",
-      dbDatabase: domain.dbDatabase || "",
+      dbUserName: domain.dbUserName || "",
+      dbPass: domain.dbPass || "",
+      dbName: domain.dbName || "",
     });
     setShowModal(true);
   };
@@ -184,27 +192,27 @@ const handleTrainModel = async (domainId: string) => {
   //   }
   // };
 
-  const handleKBUpdate = async (id: string) => {
-    try {
-      await apiService.updateDomainKB(id);
-      fetchDomains(currentPage, searchTerm);
-    } catch (error) {
-      console.error("Error updating KB:", error);
-    }
-  };
+  // const handleKBUpdate = async (id: string) => {
+  //   try {
+  //     await apiService.updateDomainKB(id);
+  //     fetchDomains(currentPage, searchTerm);
+  //   } catch (error) {
+  //     console.error("Error updating KB:", error);
+  //   }
+  // };
 
   const openModal = () => {
     setEditingDomain(null);
     setFormData({
-    id: "",
+      id: "",
       name: "",
-      url: "",
-      openAIKey: "",
-      dbHost: "",
-      dbUser: "",
+      domain: "",
+      openai_api_key: "",
+      dbIP: "",
+      dbUserName: "",
       dbPort: "",
-      dbPassword: "",
-      dbDatabase: "",
+      dbPass: "",
+      dbName: "",
       status: "active",
     });
     setShowModal(true);
@@ -294,7 +302,7 @@ const handleTrainModel = async (domainId: string) => {
                             </div>
                             <div className="text-sm text-gray-500 flex items-center">
                               <ExternalLink className="h-3 w-3 mr-1" />
-                              {domain.url}
+                              {domain.domain}
                             </div>
                             {/* <div className="text-xs text-gray-400">
                               ID: {domain.id}
@@ -319,19 +327,19 @@ const handleTrainModel = async (domainId: string) => {
                         <div className="flex flex-col">
                           <div className="flex items-center mb-1">
                             <Calendar className="h-4 w-4 mr-1" />
-                            {domain.kbSettings.lastUpdated
+                            {domain?.kbSettings?.lastUpdated
                               ? new Date(
-                                  domain.kbSettings.lastUpdated
+                                  domain?.kbSettings?.lastUpdated
                                 ).toLocaleDateString()
                               : "Never"}
                           </div>
-                          <button
+                          {/* <button
                             onClick={() => handleKBUpdate(domain.id)}
                             className="inline-flex items-center text-xs text-blue-600 hover:text-blue-700"
                           >
                             <RefreshCw className="h-3 w-3 mr-1" />
                             Update Now
-                          </button>
+                          </button> */}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -367,13 +375,13 @@ const handleTrainModel = async (domainId: string) => {
                           >
                             <Trash2 className="h-4 w-4" />
                           </button> */}
-                            <button
-    onClick={() => handleTrainModel(domain.id)}
-    className="text-green-600 hover:text-green-900"
-    title="Train Model"
-  >
-    Train
-  </button>
+                          <button
+                            onClick={() => handleTrainModel(domain.id)}
+                            className="text-green-600 hover:text-green-900"
+                            title="Train Model"
+                          >
+                            Train
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -382,12 +390,14 @@ const handleTrainModel = async (domainId: string) => {
               </table>
             </div>
 
-{training && (
-  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-    <div className="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent"></div>
-    <span className="ml-4 text-white font-medium">Training in progress...</span>
-  </div>
-)}
+            {training && (
+              <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+                <div className="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent"></div>
+                <span className="ml-4 text-white font-medium">
+                  Training in progress...
+                </span>
+              </div>
+            )}
 
             {/* Pagination */}
             {totalPages > 1 && (
@@ -436,7 +446,12 @@ const handleTrainModel = async (domainId: string) => {
                   required
                   value={formData.name}
                   onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value.charAt(0).toUpperCase() + e.target.value.slice(1), })
+                    setFormData({
+                      ...formData,
+                      name:
+                        e.target.value.charAt(0).toUpperCase() +
+                        e.target.value.slice(1),
+                    })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter name"
@@ -447,11 +462,11 @@ const handleTrainModel = async (domainId: string) => {
                   Website URL
                 </label>
                 <input
-                  type="url"
+                  type="domain"
                   required
-                  value={formData.url}
+                  value={formData.domain}
                   onChange={(e) =>
-                    setFormData({ ...formData, url: e.target.value })
+                    setFormData({ ...formData, domain: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="https://example.com"
@@ -464,9 +479,9 @@ const handleTrainModel = async (domainId: string) => {
                 <input
                   type="text"
                   placeholder="Enter OpenAI Key"
-                  value={formData.openAIKey}
+                  value={formData.openai_api_key}
                   onChange={(e) =>
-                    setFormData({ ...formData, openAIKey: e.target.value })
+                    setFormData({ ...formData, openai_api_key: e.target.value })
                   }
                   className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-600 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-300"
                 />
@@ -484,9 +499,9 @@ const handleTrainModel = async (domainId: string) => {
                     </label>
                     <input
                       type="text"
-                      value={formData.dbHost}
+                      value={formData.dbIP}
                       onChange={(e) =>
-                        setFormData({ ...formData, dbHost: e.target.value })
+                        setFormData({ ...formData, dbIP: e.target.value })
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="localhost"
@@ -500,9 +515,9 @@ const handleTrainModel = async (domainId: string) => {
                     </label>
                     <input
                       type="text"
-                      value={formData.dbUser}
+                      value={formData.dbUserName}
                       onChange={(e) =>
-                        setFormData({ ...formData, dbUser: e.target.value })
+                        setFormData({ ...formData, dbUserName: e.target.value })
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="username"
@@ -516,9 +531,9 @@ const handleTrainModel = async (domainId: string) => {
                     </label>
                     <input
                       type="password"
-                      value={formData.dbPassword}
+                      value={formData.dbPass}
                       onChange={(e) =>
-                        setFormData({ ...formData, dbPassword: e.target.value })
+                        setFormData({ ...formData, dbPass: e.target.value })
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="••••••••"
@@ -532,9 +547,9 @@ const handleTrainModel = async (domainId: string) => {
                     </label>
                     <input
                       type="text"
-                      value={formData.dbDatabase}
+                      value={formData.dbName}
                       onChange={(e) =>
-                        setFormData({ ...formData, dbDatabase: e.target.value })
+                        setFormData({ ...formData, dbName: e.target.value })
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="database_name"

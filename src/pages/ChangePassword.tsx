@@ -9,39 +9,30 @@ import { Eye, EyeOff, Bot } from "lucide-react";
 const ChangePassword: React.FC = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const { admin, changePassword } = useAuth(); // Add this method in your AuthContext
+  const { admin, changePassword } = useAuth(); 
   const navigate = useNavigate();
 
-const handleSubmit = async (e: FormEvent) => {
-  e.preventDefault();
-  setError("");
-  setSuccess("");
-
-//   if (newPassword !== confirmPassword) {
-//     setError("New password and confirm password do not match.");
-//     return;
-//   }
-
-  setLoading(true);
-  try {
-    await changePassword(currentPassword, newPassword); // oldPassword and newPassword will match backend
-    setSuccess("Password changed successfully!");
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    setTimeout(() => navigate("/dashboard"), 1500);
-  } catch (err: any) {
-    setError(err.response?.data?.message || "Password change failed");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setLoading(true);
+    try {
+      await changePassword(currentPassword, newPassword);
+      setSuccess("Password changed successfully!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setTimeout(() => navigate("/dashboard"), 1500);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Password change failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
@@ -98,34 +89,6 @@ const handleSubmit = async (e: FormEvent) => {
                 placeholder="Enter new password"
               />
             </div>
-
-            {/* <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Confirm New Password
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="block w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Confirm new password"
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-400" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-gray-400" />
-                  )}
-                </button>
-              </div>
-            </div> */}
-
             <div>
               <button
                 type="submit"

@@ -1,14 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
-import {
-  Search,
-  Download,
-  DollarSign,
-  Activity,
-  TrendingUp,
-} from 'lucide-react';
+import { Search, Download, DollarSign, Activity, TrendingUp } from 'lucide-react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -23,77 +18,40 @@ import {
 import { Line, Bar } from 'react-chartjs-2';
 import { format, subDays } from 'date-fns';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend);
 
+// ---------------- Types ----------------
 interface Domain {
   id: string;
-  _id: string;
+  _id?: string;
   name: string;
-  url: string;
-  domainId: string;
+  url?: string;
+  domainId?: string;
 }
 
 interface TokenLog {
   id: string;
-  domain: {
-    _id: string;
-    name: string;
-    url: string;
-    domainId: string;
-  };
+  domain: { _id?: string; name: string; url?: string; domainId?: string };
   date: string;
   tokensUsed: number;
   requestType: string;
   cost: number;
-  metadata: {
-    userQuery?: string;
-    responseLength?: number;
-    sessionId?: string;
-    model?: string;
-  };
 }
 
 interface TokenStats {
-  total: {
-    totalTokens: number;
-    totalCost: number;
-    totalRequests: number;
-  };
-  dailyUsage: Array<{
-    _id: string;
-    tokens: number;
-    day: string;
-    cost: number;
-    requests: number;
-  }>;
-  usageByDomain: Array<{
-    _id: string;
-    tokens: number;
-    cost: number;
-    requests: number;
-     domain: {
-    name: string;
-  };
-    domainName: string;
-  }>;
+  total: { totalTokens: number; totalCost: number; totalRequests: number };
+  dailyUsage: Array<{ _id?: string; tokens: number; day: string; cost: number; requests: number }>;
+  usageByDomain: Array<{ _id?: string; tokens: number; cost: number; requests: number; domain: { name: string } }>;
 }
 
+// ---------------- Component ----------------
 const TokenUsage: React.FC = () => {
   const [domains, setDomains] = useState<Domain[]>([]);
   const [logs, setLogs] = useState<TokenLog[]>([]);
   const [stats, setStats] = useState<TokenStats>({
     total: { totalTokens: 0, totalCost: 0, totalRequests: 0 },
     dailyUsage: [],
-    usageByDomain: []
+    usageByDomain: [],
   });
   const [loading, setLoading] = useState(false);
   const [statsLoading, setStatsLoading] = useState(false);
@@ -106,169 +64,15 @@ const TokenUsage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Helper: safe formatting for dates
+  // ---------------- Helpers ----------------
   const safeFormatDate = (dateStr: string, fmt = 'MMM dd') => {
     const date = new Date(dateStr);
     return isNaN(date.getTime()) ? 'Invalid Date' : format(date, fmt);
   };
 
-  // Helper: safe number formatting for cost
   const safeCost = (cost: any) => {
     const n = Number(cost ?? 0);
     return isNaN(n) ? '0.0000' : n.toFixed(4);
-  };
-
-  const fetchDomains = async () => {
-    try {
-      const response = await apiService.getDomains({ limit: 100 });
-      setDomains(response.domains);
-    } catch (error) {
-      console.error('Error fetching domains:', error);
-    }
-  };
-
- const fetchTokenLogs = async (page = 1) => {
-  try {
-    setLoading(true);
-    const params: any = { page, limit: 10 };
-    if (selectedDomain) params.id = selectedDomain;
-    if (startDate) params.startDate = startDate;
-    if (endDate) params.endDate = endDate;
-    if (requestType) params.requestType = requestType;
-
-    const response = await apiService.getTokenUsage(params);
-    setLogs(response.logs);
-    setTotalPages(response.totalPages);
-    setCurrentPage(response.currentPage);
-  } catch (error) {
-    console.error('Error fetching token logs:', error);
-  } finally {
-    setLoading(false);
-  }
-};
-
-const fetchTokenStats = async () => {
-  try {
-    setStatsLoading(true);
-    const params: any = { days: 30 };
-    if (selectedDomain) params.id = selectedDomain;
-
-
-    const response = await apiService.getTokenStats(params);
-    setStats(response);
-  } catch (error) {
-    console.error('Error fetching token stats:', error);
-  } finally {
-    setStatsLoading(false);
-  }
-};
-
-
-  useEffect(() => {
-    fetchDomains();
-  }, []);
-
-  useEffect(() => {
-    fetchTokenLogs();
-    fetchTokenStats();
-  }, [selectedDomain, startDate, endDate, requestType]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCurrentPage(1);
-    fetchTokenLogs(1);
-    fetchTokenStats();
-  };
-
-  const downloadReport = async (format: 'csv' | 'pdf') => {
-    try {
-      const params: any = {};
-      if (selectedDomain) params.id = selectedDomain;
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
-
-      let blob;
-      if (format === 'csv') {
-        blob = await apiService.downloadCSVReport(params);
-      } else {
-        blob = await apiService.downloadPDFReport(params);
-      }
-
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `token-usage-report.${format}`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error(`Error downloading ${format.toUpperCase()} report:`, error);
-    }
-  };
-
-
-
-  // Chart data
-  const lineChartData = {
-    labels: stats.dailyUsage.map(item => safeFormatDate(item?.day)),
-    datasets: [
-      {
-        label: 'Tokens Used',
-        data: stats.dailyUsage.map(item => item.tokens),
-        borderColor: 'rgb(59, 130, 246)',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        tension: 0.4,
-      },
-      {
-        label: 'Requests',
-        data: stats.dailyUsage.map(item => item.requests),
-        borderColor: 'rgb(16, 185, 129)',
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-        tension: 0.4,
-        yAxisID: 'y1',
-      },
-    ],
-  };
-
-const barChartData = {
-  labels: stats.usageByDomain.map(item => item.domain.name || 'Unknown'),
-  datasets: [
-    {
-      label: 'Tokens Used',
-      data: stats.usageByDomain.map(item => item.tokens),
-      backgroundColor: 'rgba(59, 130, 246, 0.6)',
-      borderColor: 'rgb(59, 130, 246)',
-      borderWidth: 1,
-    },
-  ],
-};
-
-
-  const chartOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-    },
-    scales: {
-      y: {
-        type: 'linear' as const,
-        display: true,
-        position: 'left' as const,
-        beginAtZero: true,
-      },
-      y1: {
-        type: 'linear' as const,
-        display: true,
-        position: 'right' as const,
-        beginAtZero: true,
-        grid: {
-          drawOnChartArea: false,
-        },
-      },
-    },
   };
 
   const getRequestTypeColor = (type: string) => {
@@ -286,7 +90,91 @@ const barChartData = {
     }
   };
 
-  return (
+  // ---------------- Mock API Calls ----------------
+  const fetchTokenLogs = async (page = 1) => {
+    setLoading(true);
+    await new Promise(r => setTimeout(r, 500)); // simulate delay
+
+    const mockLogs: TokenLog[] = Array.from({ length: 10 }, (_, i) => ({
+      id: `log_${page}_${i + 1}`,
+      domain: { name: `Domain ${i + 1}` },
+      date: format(subDays(new Date(), i), 'yyyy-MM-dd'),
+      tokensUsed: Math.floor(Math.random() * 500) + 50,
+      requestType: ['chat', 'kb_update', 'training', 'crawl'][i % 4],
+      cost: parseFloat((Math.random() * 5).toFixed(4)),
+    }));
+
+    setLogs(mockLogs);
+    setTotalPages(5);
+    setCurrentPage(page);
+    setLoading(false);
+  };
+
+  const fetchTokenStats = async () => {
+    setStatsLoading(true);
+    await new Promise(r => setTimeout(r, 500)); // simulate delay
+
+    const dailyUsage = Array.from({ length: 30 }, (_, i) => ({
+      day: format(subDays(new Date(), i), 'yyyy-MM-dd'),
+      tokens: Math.floor(Math.random() * 500) + 100,
+      requests: Math.floor(Math.random() * 50) + 5,
+      cost: parseFloat((Math.random() * 10).toFixed(4)),
+    }));
+
+    const usageByDomain = Array.from({ length: 5 }, (_, i) => ({
+      domain: { name: `Domain ${i + 1}` },
+      tokens: Math.floor(Math.random() * 1000) + 200,
+      requests: Math.floor(Math.random() * 100) + 10,
+      cost: parseFloat((Math.random() * 20).toFixed(4)),
+    }));
+
+    const totalTokens = dailyUsage.reduce((acc, d) => acc + d.tokens, 0);
+    const totalRequests = dailyUsage.reduce((acc, d) => acc + d.requests, 0);
+    const totalCost = dailyUsage.reduce((acc, d) => acc + d.cost, 0);
+
+    setStats({ total: { totalTokens, totalCost, totalRequests }, dailyUsage, usageByDomain });
+    setStatsLoading(false);
+  };
+
+  const downloadReport = async (format: 'csv' | 'pdf') => {
+    alert(`Downloading mock ${format.toUpperCase()} report...`);
+  };
+
+  // ---------------- Effects ----------------
+  useEffect(() => {
+    apiService.getDomains({ limit: 100 }).then(res => setDomains(res.tenants || []));
+  }, []);
+
+  useEffect(() => {
+    fetchTokenLogs();
+    fetchTokenStats();
+  }, [selectedDomain, startDate, endDate, requestType]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCurrentPage(1);
+    fetchTokenLogs(1);
+    fetchTokenStats();
+  };
+
+  // ---------------- Charts ----------------
+  const lineChartData = {
+    labels: stats.dailyUsage.map(item => safeFormatDate(item.day)),
+    datasets: [
+      { label: 'Tokens Used', data: stats.dailyUsage.map(d => d.tokens), borderColor: 'rgb(59,130,246)', backgroundColor: 'rgba(59,130,246,0.1)', tension: 0.4 },
+      { label: 'Requests', data: stats.dailyUsage.map(d => d.requests), borderColor: 'rgb(16,185,129)', backgroundColor: 'rgba(16,185,129,0.1)', tension: 0.4, yAxisID: 'y1' },
+    ],
+  };
+
+  const barChartData = {
+    labels: stats.usageByDomain.map(d => d.domain.name),
+    datasets: [{ label: 'Tokens Used', data: stats.usageByDomain.map(d => d.tokens), backgroundColor: 'rgba(59,130,246,0.6)', borderColor: 'rgb(59,130,246)', borderWidth: 1 }],
+  };
+
+  const chartOptions = { responsive: true, plugins: { legend: { position: 'top' as const } }, scales: { y: { type: 'linear' as const, display: true, position: 'left' as const, beginAtZero: true }, y1: { type: 'linear' as const, display: true, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false } } } };
+
+  // ---------------- Render ----------------
+   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">

@@ -196,7 +196,7 @@ router.post("/update", authenticateToken, async (req, res) => {
       dbUserName: dbUser || "",
       dbName: dbDatabase || "",
       dbPass: dbPassword || "",
-      dbPort: dbPort ? String(dbPort) : "",
+      dbPort: dbPort ? Number(dbPort) : "",
       status: status ? status.charAt(0).toUpperCase() + status.slice(1).toLowerCase() : "Active"
     };
 

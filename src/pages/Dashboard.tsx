@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -84,23 +85,36 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Demo data for token stats
+  const demoTokenStats: DashboardStats = {
+    totalDomains: 5,
+    totalTokens: 12450,
+    totalCost: 250.75,
+    totalRequests: 312,
+    dailyUsage: Array.from({ length: 30 }, (_, i) => ({
+      _id: `${i}`,
+      tokens: Math.floor(Math.random() * 500),
+      cost: Math.random() * 10,
+      requests: Math.floor(Math.random() * 50),
+      day: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString()
+    })),
+    usageByDomain: [
+      { tokens: 4000, cost: 80, requests: 100, domain: { name: 'Domain A' } },
+      { tokens: 3000, cost: 60, requests: 80, domain: { name: 'Domain B' } },
+      { tokens: 2500, cost: 50, requests: 60, domain: { name: 'Domain C' } },
+      { tokens: 2000, cost: 40, requests: 40, domain: { name: 'Domain D' } },
+      { tokens: 950, cost: 20, requests: 32, domain: { name: 'Domain E' } },
+    ]
+  };
+
   const fetchDashboardData = async () => {
     try {
-      const [tokenStats, domainsData] = await Promise.all([
-        apiService.getTokenStats({ days: 30 }),
-        apiService.getDomains({ limit: 5 })
-      ]);
+      // Real API call
+      const domainsData = await apiService.getDomains({ limit: 5 });
 
-      setStats({
-        totalDomains: domainsData.total || 0,
-        totalTokens: tokenStats.total.totalTokens || 0,
-        totalCost: tokenStats.total.totalCost || 0,
-        totalRequests: tokenStats.total.totalRequests || 0,
-        dailyUsage: tokenStats.dailyUsage || [],
-        usageByDomain: tokenStats.usageByDomain || []
-      });
+      // Set demo token stats
+      setStats(demoTokenStats);
       setDomains(domainsData.domains || []);
-
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -118,7 +132,7 @@ const Dashboard: React.FC = () => {
     fetchDashboardData();
   };
 
-  // Prepare chart data
+  // --- chart setup remains the same ---
   const lineChartData = {
     labels: stats.dailyUsage.map(item => safeFormatDate(item.day, 'MMM dd')),
     datasets: [
@@ -153,16 +167,8 @@ const Dashboard: React.FC = () => {
 
   const chartOptions = {
     responsive: true,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-      },
-    },
+    plugins: { legend: { position: 'top' as const } },
+    scales: { y: { beginAtZero: true } },
   };
 
   if (loading) {
@@ -358,5 +364,6 @@ const Dashboard: React.FC = () => {
     </div>
   );
 };
+
 
 export default Dashboard;

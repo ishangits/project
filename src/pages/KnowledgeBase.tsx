@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect } from "react";
@@ -10,11 +11,13 @@ import {
   RefreshCw,
   Filter,
 } from "lucide-react";
+import { toast } from "react-toastify";
+
 
 interface Domain {
   id: string;
   name: string;
-  url: string;
+  domain: string;
   domainId: string;
 }
 
@@ -56,9 +59,9 @@ const KnowledgeBase: React.FC = () => {
   const fetchDomains = async () => {
     try {
       const response = await apiService.getDomains({ limit: 100 });
-      setDomains(response.domains);
-      if (response.domains.length > 0 && !selectedDomain) {
-        setSelectedDomain(response.domains[0].id);
+      setDomains(response.tenants);
+      if (response.tenants.length > 0 && !selectedDomain) {
+        setSelectedDomain(response.tenants[0].id);
       }
     } catch (error) {
       console.error("Error fetching domains:", error);
@@ -143,22 +146,25 @@ const KnowledgeBase: React.FC = () => {
     }
   };
 
-  const handleFileUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedDomain || !uploadFile) return;
+const handleFileUpload = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!selectedDomain || !uploadFile) return;
 
-    try {
-      setUploadProgress(true);
-      await apiService.uploadKBFile(selectedDomain, uploadFile);
-      setShowUploadModal(false);
-      setUploadFile(null);
-      fetchEntries(selectedDomain, currentPage);
-    } catch (error) {
-      console.error("Error uploading file:", error);
-    } finally {
-      setUploadProgress(false);
-    }
-  };
+  try {
+    setUploadProgress(true);
+    const result = await apiService.uploadKBFile(selectedDomain, uploadFile);
+toast.success(result.message);
+    setShowUploadModal(false);
+    setUploadFile(null);
+    (e.target as HTMLFormElement).reset();
+    fetchEntries(selectedDomain, currentPage);
+  } catch (error: any) {
+    console.error("Error uploading KB file:", error);
+    toast.error(error.message || "Upload failed");
+  } finally {
+    setUploadProgress(false);
+  }
+};
 
   // const handleDelete = async (entryId: string) => {
   //   if (
@@ -232,7 +238,7 @@ const KnowledgeBase: React.FC = () => {
               <option value="">Select a domain...</option>
               {domains.map((domain) => (
                 <option key={domain.id || domain.name} value={domain.id}>
-                  {domain.name} ({domain.url})
+                  {domain.name} ({domain.domain})
                 </option>
               ))}
             </select>
@@ -497,7 +503,7 @@ const KnowledgeBase: React.FC = () => {
                 </label>
                 <input
                   type="file"
-                  accept=".csv,.xlsx,.xls,.pdf"
+                  accept=".csv,.xlsx,.xls"
                   onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />

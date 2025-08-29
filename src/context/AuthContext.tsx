@@ -102,13 +102,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     apiService.clearAuthToken();
   };
 
-  const changePassword = async (oldPassword: string, newPassword: string) => {
-    try {
-      await apiService.changePassword(oldPassword, newPassword);
-    } catch (error) {
-      throw error;
-    }
-  };
+ const changePassword = async (oldPassword: string, newPassword: string) => {
+  if (!token) throw new Error("No token available. Please login first.");
+
+  try {
+    await apiService.changePassword(token, oldPassword, newPassword);
+  } catch (error) {
+    throw error;
+  }
+};
+
 
   const value: AuthContextType = {
     admin,

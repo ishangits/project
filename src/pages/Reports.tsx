@@ -1,13 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import {
   Download,
-  Calendar,
-  Filter,
   FileText,
   DollarSign,
-  Activity,
-  TrendingUp
 } from 'lucide-react';
 
 interface Domain {
@@ -29,7 +26,7 @@ const Reports: React.FC = () => {
   const fetchDomains = async () => {
     try {
       const response = await apiService.getDomains({ limit: 100 });
-      setDomains(response.domains);
+      setDomains(response.tenants);
     } catch (error) {
       console.error('Error fetching domains:', error);
     }
