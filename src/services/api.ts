@@ -254,7 +254,7 @@ await this.api.post('/api/kb/bulk/', {
     `/v1/chat`,
     {
       message,
-      session_id: sessionId || "10",
+      session_id: sessionId || "6",
     },
     {
       headers: {
