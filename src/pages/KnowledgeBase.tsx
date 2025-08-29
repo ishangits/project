@@ -86,11 +86,11 @@ const KnowledgeBase: React.FC = () => {
       // Backend returned a simple array
       entries = response.map((item: any) => ({
         _id: item.id?.toString(),
-        type: "manual", // default since API doesn’t send it
+        // type: "manual", // default since API doesn’t send it
         question: item.title || "",
         answer: item.content || "",
         content: item.content || "",
-        source: "manual",
+        source: item.source,
         metadata: {},
         status: "active",
         createdAt: new Date().toISOString(),
@@ -295,8 +295,6 @@ toast.success(result.message);
               <option value="">All Types</option>
               <option value="manual">Manual</option>
               <option value="upload">Upload</option>
-              <option value="crawled">Crawled</option>
-              <option value="faq">FAQ</option>
             </select>
           </div>
           <button
@@ -320,9 +318,9 @@ toast.success(result.message);
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Type
-                    </th>
+                    </th> */}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Content
                     </th>
@@ -341,9 +339,9 @@ toast.success(result.message);
   {Array.isArray(entries) && entries.length > 0 ? (
     entries.map((entry) => (
       <tr key={entry._id}>
-        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
           {entry.type}
-        </td>
+        </td> */}
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
           <div className="font-medium">{entry.question}</div>
           <div className="text-gray-500">{entry.answer}</div>

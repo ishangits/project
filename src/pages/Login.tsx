@@ -112,11 +112,11 @@ const Login: React.FC = () => {
             </div>
           </div>
           
-          <div className="text-center">
+          {/* <div className="text-center">
             <p className="text-xs text-gray-500">
               Demo credentials: admin@chatbot.com / admin123
             </p>
-          </div>
+          </div> */}
         </form>
       </div>
     </div>

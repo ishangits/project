@@ -10,7 +10,13 @@ import {
   Calendar,
 } from "lucide-react";
  import { toast } from "react-toastify";
+ import { MessageCircle } from 'lucide-react';
+import ChatbotWidget from './ChatbotWidget';
 
+interface ChatState {
+  isOpen: boolean;
+  tenantId: string | null;
+}
 
 interface Domain {
   id: string;
@@ -25,10 +31,7 @@ interface Domain {
   dbUserName: string;
   dbPass: string;
   dbName: string;
-  kbSettings: {
-    lastUpdated: string | null;
-    autoUpdate: boolean;
-  };
+  knowledgeBaseUpdatedAt: string | null;
   status: string;
   createdAt: string;
 }
@@ -42,6 +45,10 @@ const Domains: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [training, setTraining] = useState(false);
   const [editingDomain, setEditingDomain] = useState<Domain | null>(null);
+  const [chatState, setChatState] = useState<ChatState>({
+  isOpen: false,
+  tenantId: null,
+});
   const [formData, setFormData] = useState({
     id: "", // use this instead of 'id'
     name: "",
@@ -54,6 +61,21 @@ const Domains: React.FC = () => {
     dbName: "", // maps to 'dbName'
     status: "active",
   });
+
+  const handleChatClick = (tenantId: string) => {
+  setChatState({
+    isOpen: true,
+    tenantId: tenantId,
+  });
+};
+
+// Add this function to close the chat
+const handleChatClose = () => {
+  setChatState({
+    isOpen: false,
+    tenantId: null,
+  });
+};
 
   const fetchDomains = async (page = 1, search = "") => {
     try {
@@ -132,7 +154,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
 
   const handleTrainModel = async (domainId: string) => {
-  const TIMEOUT = 30000; // 30 sec
+  // const TIMEOUT = 30000; // 30 sec
   setTraining(true);
 
   try {
@@ -140,14 +162,14 @@ const handleSubmit = async (e: React.FormEvent) => {
     if (!token) throw new Error("You are not logged in");
 
     // Timeout promise
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Request timed out")), TIMEOUT)
-    );
+    // const timeoutPromise = new Promise((_, reject) =>
+    //   setTimeout(() => reject(new Error("Request timed out")), TIMEOUT)
+    // );
 
     // Race API call with timeout
     const response = await Promise.race([
       apiService.trainModel({ tenantId: domainId }, token),
-      timeoutPromise,
+      // timeoutPromise,
     ]);
 
     console.log("Training started:", response);
@@ -327,9 +349,9 @@ const handleSubmit = async (e: React.FormEvent) => {
                         <div className="flex flex-col">
                           <div className="flex items-center mb-1">
                             <Calendar className="h-4 w-4 mr-1" />
-                            {domain?.kbSettings?.lastUpdated
+                            {domain?.knowledgeBaseUpdatedAt
                               ? new Date(
-                                  domain?.kbSettings?.lastUpdated
+                                  domain?.knowledgeBaseUpdatedAt
                                 ).toLocaleDateString()
                               : "Never"}
                           </div>
@@ -382,6 +404,13 @@ const handleSubmit = async (e: React.FormEvent) => {
                           >
                             Train
                           </button>
+<button
+  onClick={() => handleChatClick(domain.id)}
+  className="text-blue-600 hover:text-blue-900"
+  title="Open Chat"
+>
+  <MessageCircle className="h-4 w-4" />
+</button>
                         </div>
                       </td>
                     </tr>
@@ -678,6 +707,13 @@ const handleSubmit = async (e: React.FormEvent) => {
           </div>
         </div>
       )} */}
+      {chatState.isOpen && chatState.tenantId && (
+  <ChatbotWidget
+    tenantId={chatState.tenantId}
+    isOpen={chatState.isOpen}
+    onClose={handleChatClose}
+  />
+)}
     </div>
   );
 };

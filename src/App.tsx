@@ -1,14 +1,19 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
-import Layout from './components/Layout';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import KnowledgeBase from './pages/KnowledgeBase';
-import TokenUsage from './pages/TokenUsage';
-import Reports from './pages/Reports';
-import Domains from './pages/Domains';
-import ChangePassword from './pages/ChangePassword';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Layout from "./components/Layout";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import KnowledgeBase from "./pages/KnowledgeBase";
+import TokenUsage from "./pages/TokenUsage";
+import Reports from "./pages/Reports";
+import Domains from "./pages/Domains";
+import ChangePassword from "./pages/ChangePassword";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -23,22 +28,24 @@ function App() {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <Layout>
+                                <Layout>
+
                   <Dashboard />
-                </Layout>
+                                  </Layout>
+
               </ProtectedRoute>
             }
           />
           <Route
-  path="/change-password"
-  element={
-    <ProtectedRoute>
-      <Layout>
-        <ChangePassword />
-      </Layout>
-    </ProtectedRoute>
-  }
-/>
+            path="/change-password"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <ChangePassword />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/domains"
@@ -81,9 +88,8 @@ function App() {
             }
           />
         </Routes>
+        <ToastContainer position="top-right" autoClose={3000} />
       </Router>
-            <ToastContainer position="top-right" autoClose={3000} />
-
     </AuthProvider>
   );
 }

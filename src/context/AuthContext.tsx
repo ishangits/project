@@ -36,8 +36,10 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [admin, setAdmin] = useState<Admin | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
+  const [loading, setLoading] = useState(true); // true until auth initialized
+  // const [initialized, setInitialized] = useState(false);
+
 
   // Initialize auth from localStorage
   useEffect(() => {
@@ -56,7 +58,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             lastLogin: new Date().toISOString(),
           });
           setToken(storedToken);
+
         }
+            // setInitialized(true);
+
       } catch (error) {
         console.error('Failed to initialize auth:', error);
         localStorage.removeItem('token');

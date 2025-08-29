@@ -54,9 +54,9 @@ const safeFormatDate = (date: string | null | undefined, formatStr: string) => {
 interface DashboardStats {
   totalDomains: number;
   totalTokens: number;
-  totalCost: number;
+  totalKbEntries: number;
   totalRequests: number;
-  dailyUsage: Array<{ _id: string; tokens: number; cost: number; requests: number, day: string }>;
+  dateWiseTokens: Array<{date: string, tokens: number;  }>;
   usageByDomain: Array<{ tokens: number; cost: number; requests: number; domain: {name: string} }>;
 }
 
@@ -76,9 +76,9 @@ const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalDomains: 0,
     totalTokens: 0,
-    totalCost: 0,
+    totalKbEntries: 0,
     totalRequests: 0,
-    dailyUsage: [],
+    dateWiseTokens: [],
     usageByDomain: []
   });
   const [domains, setDomains] = useState<Domain[]>([]);
@@ -89,14 +89,14 @@ const Dashboard: React.FC = () => {
   const demoTokenStats: DashboardStats = {
     totalDomains: 5,
     totalTokens: 12450,
-    totalCost: 250.75,
+    totalKbEntries: 250.75,
     totalRequests: 312,
-    dailyUsage: Array.from({ length: 30 }, (_, i) => ({
-      _id: `${i}`,
+    dateWiseTokens: Array.from({ length: 30 }, (_, i) => ({
+      // _id: `${i}`,
       tokens: Math.floor(Math.random() * 500),
-      cost: Math.random() * 10,
-      requests: Math.floor(Math.random() * 50),
-      day: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString()
+      // cost: Math.random() * 10,
+      // requests: Math.floor(Math.random() * 50),
+      date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString()
     })),
     usageByDomain: [
       { tokens: 4000, cost: 80, requests: 100, domain: { name: 'Domain A' } },
@@ -107,21 +107,42 @@ const Dashboard: React.FC = () => {
     ]
   };
 
-  const fetchDashboardData = async () => {
-    try {
-      // Real API call
-      const domainsData = await apiService.getDomains({ limit: 5 });
+ const fetchDashboardData = async () => {
+  try {
+    // ✅ Call your API
+    const data = await apiService.getDashboardData();
 
-      // Set demo token stats
-      setStats(demoTokenStats);
-      setDomains(domainsData.domains || []);
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+    // ✅ Map API response → DashboardStats
+    const mappedStats: DashboardStats = {
+      totalDomains: data?.totalTenants || 0,  // tenants = domains
+      totalTokens: Number(data?.totalTokens) || 0,
+      totalKbEntries: data?.totalKBEntries,
+      // totalCost: 0, // not available in API, keep 0 or calculate later if needed
+      totalRequests: Number(data?.totalChatMessageResult) || 0,
+      dateWiseTokens: (data?.dateWiseTokens || []).map((item: any, idx: number) => ({
+        // _id: String(idx),
+        tokens: Number(item?.tokens) || 0,
+        cost: 0, // not provided in API
+        requests: 0, // not provided in API
+        day: item?.date
+      })),
+      usageByDomain: [] // API does not give per-domain stats
+    };
+
+    setStats(mappedStats);
+
+    // (optional) if you still want domains preview table:
+    const domainsData = await apiService.getDomains({ limit: 5 });
+    setDomains(domainsData.tenants || []);
+
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
+
 
   useEffect(() => {
     fetchDashboardData();
@@ -134,11 +155,11 @@ const Dashboard: React.FC = () => {
 
   // --- chart setup remains the same ---
   const lineChartData = {
-    labels: stats.dailyUsage.map(item => safeFormatDate(item.day, 'MMM dd')),
+    labels: stats.dateWiseTokens.map(item => safeFormatDate(item.date, 'MMM dd')),
     datasets: [
       {
         label: 'Tokens Used',
-        data: stats.dailyUsage.map(item => item.tokens),
+        data: stats.dateWiseTokens.map(item => item.tokens),
         borderColor: 'rgb(59, 130, 246)',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
         tension: 0.4,
@@ -228,9 +249,9 @@ const Dashboard: React.FC = () => {
               <DollarSign className="h-6 w-6 text-yellow-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Cost</p>
+              <p className="text-sm font-medium text-gray-600">Total KB Entries</p>
               <p className="text-2xl font-bold text-gray-900">
-  ${Number(stats.totalCost || 0).toFixed(2)}
+  {Number(stats.totalKbEntries || 0)}
               </p>
             </div>
           </div>
@@ -277,7 +298,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Domains Overview Table */}
-      <div className="bg-white rounded-lg shadow-md">
+      {/* <div className="bg-white rounded-lg shadow-md">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Recent Domains</h3>
@@ -360,7 +381,7 @@ const Dashboard: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

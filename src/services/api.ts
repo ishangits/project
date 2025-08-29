@@ -21,25 +21,28 @@ class ApiService {
     });
 
     // Response interceptor for error handling
-    this.api.interceptors.response.use(
-      (response: AxiosResponse) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          // Token expired or invalid
-          localStorage.removeItem('token');
-          window.location.href = '/login';
-        }
-        return Promise.reject(error);
-      }
-    );
+  // api.ts
+this.api.interceptors.response.use(
+  (response: AxiosResponse) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Instead of redirecting immediately
+      localStorage.removeItem('token');
+      // Optionally: set a flag or throw
+      return Promise.reject({ ...error, code: 401 });
+    }
+    return Promise.reject(error);
+  }
+);
+
   }
 
   setAuthToken(token: string) {
-    this.api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    this.api.defaults.headers.common['token'] = `${token}`;
   }
 
   clearAuthToken() {
-    delete this.api.defaults.headers.common['Authorization'];
+    delete this.api.defaults.headers.common['token'];
   }
 
   // Auth endpoints
@@ -49,15 +52,15 @@ class ApiService {
   }
 
   
- async verifyToken() {
-  const response = await this.api.get('/api/admin/verify');
-  return response.data;
-}
+//  async verifyToken() {
+//   const response = await this.api.get('/api/admin/verify');
+//   return response.data;
+// }
 
-  async logout() {
-    const response = await this.api.post('/auth/logout');
-    return response.data;
-  }
+  // async logout() {
+  //   const response = await this.api.post('/auth/logout');
+  //   return response.data;
+  // }
 // Auth endpoints
 async changePassword(token: string, currentPassword: string, newPassword: string) {
   const response = await this.api.post(
@@ -83,6 +86,11 @@ async changePassword(token: string, currentPassword: string, newPassword: string
     return response.data;
   }
 
+    async getDashboardData() {
+    const response = await this.api.get('/api/admin/dashboard-metrics');
+    return response.data;
+  }
+
   async getDomain(id: string) {
     const response = await this.api.get(`/domains/${id}`);
     return response.data;
@@ -100,6 +108,8 @@ async trainModel(payload: { tenantId: string }, token: string) {
     {
       headers: {
         token: token, 
+                Authorization: undefined, // override default Authorization
+
       },
     }
   );
@@ -193,28 +203,29 @@ async uploadKBFile(domainId: string, file: File) {
     throw new Error("Unsupported file type");
   }
 
-  let successCount = 0;
-
-  for (const row of rows) {
-    const question = row.question || row.Question;
-    const answer = row.answer || row.Answer;
-    if (!question || !answer) continue;
-
-    try {
-await this.api.post('/api/kb/', {
+  // let successCount = 0;
+await this.api.post('/api/kb/bulk/', {
         tenantId: domainId,
-        title: question,
-        content: answer,
+        row: rows
+        // title: question,
+        // content: answer,
       }, {
         headers: { "X-API-Key": TENANT_API_KEY },
       });
-      successCount++;
-    } catch (err) {
-      console.error("Failed to push KB entry:", row, err);
-    }
-  }
+  // for (const row of rows) {
+  //   const question = row.question || row.Question;
+  //   const answer = row.answer || row.Answer;
+  //   if (!question || !answer) continue;
 
-  return { message: `Uploaded ${successCount} KB entries`, count: successCount };
+  //   try {
+
+  //     successCount++;
+  //   } catch (err) {
+  //     console.error("Failed to push KB entry:", row, err);
+  //   }
+  // }
+
+  return { message: `Uploaded`};
 }
 // ------------------ Reports / Mocked ------------------
   async downloadCSVReport(params: any) {
@@ -237,6 +248,24 @@ await this.api.post('/api/kb/', {
       setTimeout(() => resolve({ invoiceNumber: `INV-MOCK-${Date.now()}` }), 1000)
     );
   }
+
+  async sendChatMessage(tenantId: string, message: string, sessionId: string | null) {
+  const response = await this.api.post(
+    `/v1/chat`,
+    {
+      message,
+      session_id: sessionId || "10",
+    },
+    {
+      headers: {
+        tenantid: tenantId,
+        // X-API-Key and Content-Type already included by default in constructor
+      },
+    }
+  );
+  return response.data;
+}
+
   // async deleteKBEntry(domainId: string, entryId: string) {
   //   const response = await this.api.delete(`/kb/${domainId}/entries/${entryId}`);
   //   return response.data;
