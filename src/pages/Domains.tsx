@@ -38,6 +38,7 @@ interface Domain {
 
 const Domains: React.FC = () => {
   const [domains, setDomains] = useState<Domain[]>([]);
+  const [allDomains, setAllDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -77,16 +78,16 @@ const handleChatClose = () => {
   });
 };
 
-  const fetchDomains = async (page = 1, search = "") => {
+  const fetchDomains = async (page = 1) => {
     try {
       setLoading(true);
       const response = await apiService.getDomains({
         page,
         limit: 10,
-        search,
         sortBy: "createdAt",
         sortOrder: "desc",
       });
+      setAllDomains(response.tenants);   // keep full list
       setDomains(response.tenants);
       setTotalPages(response.totalPages);
       setCurrentPage(response.currentPage || page);
@@ -98,14 +99,25 @@ const handleChatClose = () => {
   };
 
   useEffect(() => {
-    fetchDomains(currentPage, searchTerm);
-  }, [currentPage, searchTerm]);
+    fetchDomains(currentPage);
+  }, [currentPage]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCurrentPage(1);
-    fetchDomains(1, searchTerm);
-  };
+const handleSearch = (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!searchTerm.trim()) {
+    setDomains(allDomains); // reset
+    return;
+  }
+
+  const filtered = allDomains.filter((domain) =>
+    domain.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    domain.domain.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  setDomains(filtered);
+  setCurrentPage(1); // reset to page 1
+};
+
 
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -145,7 +157,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       dbName: "",
       status: "active",
     });
-    fetchDomains(currentPage, searchTerm);
+    fetchDomains(currentPage);
   } catch (error: any) {
     console.error("Error saving domain:", error);
     toast.error(error?.response?.data?.message || "Failed to save domain");
@@ -260,12 +272,28 @@ const handleSubmit = async (e: React.FormEvent) => {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <input
-              type="text"
-              placeholder="Search domains..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+  type="text"
+  placeholder="Search domains..."
+  value={searchTerm}
+  onChange={(e) => {
+    setSearchTerm(e.target.value);
+    const value = e.target.value.toLowerCase();
+
+    if (!value) {
+      setDomains(allDomains);
+    } else {
+      setDomains(
+        allDomains.filter(
+          (d) =>
+            d.name.toLowerCase().includes(value) ||
+            d.domain.toLowerCase().includes(value)
+        )
+      );
+    }
+  }}
+  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+/>
+
           </div>
           <button
             type="submit"

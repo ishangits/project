@@ -25,7 +25,7 @@ class ApiService {
 this.api.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 || error.response?.status === 403) {
       // Instead of redirecting immediately
       localStorage.removeItem('token');
       // Optionally: set a flag or throw

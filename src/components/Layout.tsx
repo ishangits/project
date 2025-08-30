@@ -104,7 +104,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </Link>
             </div>
            <button
-  // onClick={handleLogout}
+  onClick={handleLogout}
   className="ml-3 p-2 text-gray-500 hover:text-gray-600 rounded-lg transition-colors"
   title="Logout"
 >
