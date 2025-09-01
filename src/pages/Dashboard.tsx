@@ -118,17 +118,15 @@ const Dashboard: React.FC = () => {
       totalDomains: data?.totalTenants || 0,  // tenants = domains
       totalTokens: Number(data?.totalTokens) || 0,
       totalKbEntries: data?.totalKBEntries,
-      // totalCost: 0, // not available in API, keep 0 or calculate later if needed
       totalRequests: Number(data?.totalChatMessageResult) || 0,
-      dateWiseTokens: (data?.dateWiseTokens || []).map((item: any, idx: number) => ({
-        // _id: String(idx),
+      dateWiseTokens: (data?.dateWiseTokens || []).map((item: any) => ({
         tokens: Number(item?.tokens) || 0,
         cost: 0, // not provided in API
         requests: 0, // not provided in API
         date: item?.date
       })),
-      usageByDomain: [] // API does not give per-domain stats
-    };
+usageByDomain: data?.domainWiseTokens || []
+        };
 
     setStats(mappedStats);
 
@@ -169,7 +167,7 @@ const Dashboard: React.FC = () => {
   };
 
   const doughnutData = {
-    labels: stats.usageByDomain.map(item => item?.domain?.name || 'Unknown'),
+    labels: stats.usageByDomain.map(item => item?.domain || 'Unknown'),
     datasets: [
       {
         data: stats.usageByDomain.map(item => item.tokens),
@@ -298,92 +296,6 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Domains Overview Table */}
-      {/* <div className="bg-white rounded-lg shadow-md">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Domains</h3>
-            <Link
-              to="/domains"
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-            >
-              View all
-            </Link>
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Domain
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  KB Last Updated
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Auto Update
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {domains.map((domain) => (
-                <tr key={domain.id ||  domain.name} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {domain.name}
-                      </div>
-                      <div className="text-sm text-gray-500 flex items-center">
-                        <ExternalLink className="h-3 w-3 mr-1" />
-                        {domain.url}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        domain.status === 'active'
-                          ? 'bg-green-100 text-green-800'
-                          : domain.status === 'inactive'
-                          ? 'bg-gray-100 text-gray-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {domain.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {domain.kbSettings.lastUpdated ? (
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-1" />
-                        {format(new Date(domain.kbSettings.lastUpdated), 'MMM dd, yyyy')}
-                      </div>
-                    ) : (
-                      'Never'
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        domain.kbSettings.autoUpdate
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {domain.kbSettings.autoUpdate ? 'Enabled' : 'Disabled'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div> */}
     </div>
   );
 };

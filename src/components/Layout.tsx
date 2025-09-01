@@ -5,7 +5,6 @@ import {
   LayoutDashboard,
   Users,
   BookOpen,
-  BarChart3,
   FileText,
   LogOut,
   Menu,
@@ -32,7 +31,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Domains", href: "/domains", icon: Users },
     { name: "Knowledge Base", href: "/knowledge-base", icon: BookOpen },
-    { name: "Token Usage", href: "/token-usage", icon: BarChart3 },
+    // { name: "Token Usage", href: "/token-usage", icon: BarChart3 },
     { name: "Reports", href: "/reports", icon: FileText },
   ];
 

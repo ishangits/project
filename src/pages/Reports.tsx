@@ -91,12 +91,12 @@ const Reports: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Reports & Billing</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
       </div>
 
       {/* Report Generation Form */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Generate Reports</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Download Reports</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div>
@@ -161,19 +161,19 @@ const Reports: React.FC = () => {
             {generating === 'pdf' ? 'Generating...' : 'Download PDF'}
           </button>
 
-          <button
+          {/* <button
             onClick={generateInvoice}
             disabled={loading}
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
             <FileText className="h-4 w-4 mr-2" />
             {loading ? 'Generating...' : 'Generate Invoice'}
-          </button>
+          </button> */}
         </div>
       </div>
 
       {/* Report Types */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center mb-4">
             <div className="p-2 bg-green-100 rounded-lg">
@@ -214,7 +214,7 @@ const Reports: React.FC = () => {
           </ul>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
+        {/* <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center mb-4">
             <div className="p-2 bg-blue-100 rounded-lg">
               <DollarSign className="h-6 w-6 text-blue-600" />
@@ -232,7 +232,7 @@ const Reports: React.FC = () => {
             <li>• Customizable rates</li>
             <li>• Billing periods</li>
           </ul>
-        </div>
+        </div> */}
       </div>
 
       {/* Quick Stats */}
