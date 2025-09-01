@@ -16,7 +16,9 @@ import ChatbotWidget from './ChatbotWidget';
 interface ChatState {
   isOpen: boolean;
   tenantId: string | null;
+  sessionId: string | null;
 }
+
 
 interface Domain {
   id: string;
@@ -46,9 +48,10 @@ const Domains: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [training, setTraining] = useState(false);
   const [editingDomain, setEditingDomain] = useState<Domain | null>(null);
-  const [chatState, setChatState] = useState<ChatState>({
+ const [chatState, setChatState] = useState<ChatState>({
   isOpen: false,
   tenantId: null,
+  sessionId: null,
 });
   const [formData, setFormData] = useState({
     id: "", // use this instead of 'id'
@@ -63,18 +66,30 @@ const Domains: React.FC = () => {
     status: "active",
   });
 
-  const handleChatClick = (tenantId: string) => {
-  setChatState({
-    isOpen: true,
-    tenantId: tenantId,
-  });
+ const handleChatClick = async (tenantId: string) => {
+  try {
+    // generate random user id
+    const randomUserId = Math.floor(Math.random() * 10000).toString();
+
+    // call API
+    const { session_id } = await apiService.openChatSession(tenantId, randomUserId);
+
+    // update state with session id
+    setChatState({ tenantId, sessionId: session_id, isOpen: true });
+
+  } catch (error) {
+    console.error("Failed to open chat session:", error);
+    toast.error("Failed to open chat session");
+  }
 };
+
 
 // Add this function to close the chat
 const handleChatClose = () => {
   setChatState({
     isOpen: false,
     tenantId: null,
+    sessionId: null
   });
 };
 
@@ -735,9 +750,11 @@ const handleSubmit = async (e: React.FormEvent) => {
           </div>
         </div>
       )} */}
-      {chatState.isOpen && chatState.tenantId && (
+      {chatState.isOpen && chatState.tenantId && chatState.sessionId  && (
   <ChatbotWidget
     tenantId={chatState.tenantId}
+        sessionId={chatState.sessionId}  // <- important
+
     isOpen={chatState.isOpen}
     onClose={handleChatClose}
   />

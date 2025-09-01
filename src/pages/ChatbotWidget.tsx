@@ -3,6 +3,8 @@ import { apiService } from '../services/api';
 
 interface ChatbotWidgetProps {
   tenantId: string;
+    sessionId: string | null;  // add sessionId here
+
   isOpen: boolean;
   onClose: () => void;
 }
@@ -15,7 +17,7 @@ interface Message {
   tenantId: string;
 }
 
-const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ tenantId, isOpen, onClose }) => {
+const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ tenantId, sessionId: propSessionId, isOpen, onClose }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -27,7 +29,7 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ tenantId, isOpen, onClose
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(propSessionId);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -46,6 +48,9 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ tenantId, isOpen, onClose
     }
   }, [isOpen]);
 
+   useEffect(() => {
+    setSessionId(propSessionId); // sync prop changes
+  }, [propSessionId]);
 
 
 const sendMessage = async () => {

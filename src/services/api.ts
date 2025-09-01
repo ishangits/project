@@ -288,22 +288,30 @@ await this.api.post('/api/kb/bulk/', {
     );
   }
 
-  async sendChatMessage(tenantId: string, message: string, sessionId: string | null) {
+  // In ApiService
+async openChatSession(tenantId: string, userId: string) {
   const response = await this.api.post(
-    `/v1/chat`,
-    {
-      message,
-      session_id: sessionId || "6",
-    },
+    `/v1/open/`,
+    { user_id: userId },
     {
       headers: {
-        tenantid: tenantId,
-        // X-API-Key and Content-Type already included by default in constructor
+        tenantid: tenantId, // backend expects lowercase `tenantid`
       },
     }
   );
+  return response.data; // expected to include { session_id: string }
+}
+
+
+ async sendChatMessage(tenantId: string, message: string, sessionId: string | null) {
+  const response = await this.api.post(
+    `/v1/chat`,
+    { message, session_id: sessionId || "6" },
+    { headers: { tenantid: tenantId } }
+  );
   return response.data;
 }
+
 
   // async deleteKBEntry(domainId: string, entryId: string) {
   //   const response = await this.api.delete(`/kb/${domainId}/entries/${entryId}`);
