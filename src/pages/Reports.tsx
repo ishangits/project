@@ -4,7 +4,7 @@ import { apiService } from '../services/api';
 import {
   Download,
   FileText,
-  DollarSign,
+  // DollarSign,
 } from 'lucide-react';
 
 interface Domain {
@@ -20,7 +20,7 @@ const Reports: React.FC = () => {
   const [selectedDomain, setSelectedDomain] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState<string>('');
 
   const fetchDomains = async () => {
@@ -67,25 +67,25 @@ const Reports: React.FC = () => {
     }
   };
 
-  const generateInvoice = async () => {
-    try {
-      setLoading(true);
-      const invoiceData = {
-        domainId: selectedDomain,
-        startDate,
-        endDate,
-        invoiceNumber: `INV-${Date.now()}`
-      };
+  // const generateInvoice = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const invoiceData = {
+  //       domainId: selectedDomain,
+  //       startDate,
+  //       endDate,
+  //       invoiceNumber: `INV-${Date.now()}`
+  //     };
 
-      const response = await apiService.generateInvoice(invoiceData);
-      alert(`Invoice ${response.invoiceNumber} generated successfully!`);
-    } catch (error) {
-      console.error('Error generating invoice:', error);
-      alert('Error generating invoice. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     const response = await apiService.generateInvoice(invoiceData);
+  //     alert(`Invoice ${response.invoiceNumber} generated successfully!`);
+  //   } catch (error) {
+  //     console.error('Error generating invoice:', error);
+  //     alert('Error generating invoice. Please try again.');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   return (
     <div className="space-y-6">

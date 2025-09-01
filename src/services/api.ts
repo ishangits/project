@@ -38,6 +38,7 @@ this.api.interceptors.response.use(
       case 401:
         console.warn("Unauthorized: Logging out user.");
         localStorage.removeItem("token");
+        this.logout();
         break;
 
       case 403:
@@ -67,8 +68,10 @@ this.api.interceptors.response.use(
     // Return a normalized error object
     return Promise.reject({
       code: status || "NETWORK_ERROR",
-      message: error.response?.data?.message || "Unexpected error occurred",
-      details: error.response?.data || null,
+    message:
+        status === 401 || status === 403
+          ? "Session expired. Please log in again."
+          : error.response?.data?.message || "Unexpected error occurred",      details: error.response?.data || null,
     });
   }
 );
@@ -96,10 +99,13 @@ this.api.interceptors.response.use(
 //   return response.data;
 // }
 
-  // async logout() {
-  //   const response = await this.api.post('/auth/logout');
-  //   return response.data;
-  // }
+logout() {
+  localStorage.removeItem("token");
+  this.clearAuthToken(); // removes from axios headers too
+  alert("⚠️ Your session has expired. Please log in again.");
+  window.location.href = "/login"; // or use router navigate
+}
+
 // Auth endpoints
 async changePassword(token: string, currentPassword: string, newPassword: string) {
   const response = await this.api.post(
