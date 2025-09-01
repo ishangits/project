@@ -125,7 +125,7 @@ const Dashboard: React.FC = () => {
         tokens: Number(item?.tokens) || 0,
         cost: 0, // not provided in API
         requests: 0, // not provided in API
-        day: item?.date
+        date: item?.date
       })),
       usageByDomain: [] // API does not give per-domain stats
     };
