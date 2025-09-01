@@ -23,17 +23,56 @@ class ApiService {
     // Response interceptor for error handling
   // api.ts
 this.api.interceptors.response.use(
-  (response: AxiosResponse) => response,
+  (response: AxiosResponse) => {
+    // ✅ Success response handling
+    return response;
+  },
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      // Instead of redirecting immediately
-      localStorage.removeItem('token');
-      // Optionally: set a flag or throw
-      return Promise.reject({ ...error, code: 401 });
+    const status = error.response?.status;
+
+    switch (status) {
+      case 400:
+        console.error("Bad Request:", error.response?.data?.message || "Invalid request");
+        break;
+
+      case 401:
+        console.warn("Unauthorized: Logging out user.");
+        localStorage.removeItem("token");
+        break;
+
+      case 403:
+        console.warn("Forbidden: No access.");
+        break;
+
+      case 404:
+        console.error("Not Found:", error.response?.data?.message || "Resource not found");
+        break;
+
+      case 429:
+        console.warn("Too Many Requests: Please slow down.");
+        break;
+
+      case 500:
+        console.error("Internal Server Error:", error.response?.data?.message || "Server error, try later");
+        break;
+
+      case 503:
+        console.error("Service Unavailable: Try again later.");
+        break;
+
+      default:
+        console.error("Unexpected error:", error.message || "Something went wrong");
     }
-    return Promise.reject(error);
+
+    // Return a normalized error object
+    return Promise.reject({
+      code: status || "NETWORK_ERROR",
+      message: error.response?.data?.message || "Unexpected error occurred",
+      details: error.response?.data || null,
+    });
   }
 );
+
 
   }
 

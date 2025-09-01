@@ -159,7 +159,7 @@ const Dashboard: React.FC = () => {
     labels: stats.dateWiseTokens.map(item => safeFormatDate(item.date, 'MMM dd')),
     datasets: [
       {
-        label: 'Tokens Used',
+        // label: 'Tokens Used',
         data: stats.dateWiseTokens.map(item => item.tokens),
         borderColor: 'rgb(59, 130, 246)',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -189,7 +189,8 @@ const Dashboard: React.FC = () => {
 
   const chartOptions = {
     responsive: true,
-    plugins: { legend: { position: 'top' as const } },
+    plugins: { legend: { position: 'top' as const , display: false
+} },
     scales: { y: { beginAtZero: true } },
   };
 
