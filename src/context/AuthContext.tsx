@@ -1,5 +1,3 @@
-/* eslint-disable no-useless-catch */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiService } from '../services/api';
 
@@ -37,11 +35,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
-  const [loading, setLoading] = useState(true); // true until auth initialized
-  // const [initialized, setInitialized] = useState(false);
-
-
-  // Initialize auth from localStorage
+  const [loading, setLoading] = useState(true); 
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -51,7 +45,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (storedToken && storedEmail) {
           apiService.setAuthToken(storedToken);
           setAdmin({
-            id: '1', // placeholder
+            id: '1',
             email: storedEmail,
             name: 'External Admin',
             role: 'super-admin',
@@ -60,7 +54,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setToken(storedToken);
 
         }
-            // setInitialized(true);
 
       } catch (error) {
         console.error('Failed to initialize auth:', error);
@@ -80,7 +73,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await apiService.login(email, password);
 
       const adminData: Admin = {
-        id: '1', // placeholder
+        id: '1', 
         email: response.email,
         name: 'External Admin',
         role: 'super-admin',

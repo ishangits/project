@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import {
@@ -66,26 +65,6 @@ const Reports: React.FC = () => {
       setGenerating('');
     }
   };
-
-  // const generateInvoice = async () => {
-  //   try {
-  //     setLoading(true);
-  //     const invoiceData = {
-  //       domainId: selectedDomain,
-  //       startDate,
-  //       endDate,
-  //       invoiceNumber: `INV-${Date.now()}`
-  //     };
-
-  //     const response = await apiService.generateInvoice(invoiceData);
-  //     alert(`Invoice ${response.invoiceNumber} generated successfully!`);
-  //   } catch (error) {
-  //     console.error('Error generating invoice:', error);
-  //     alert('Error generating invoice. Please try again.');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   return (
     <div className="space-y-6">

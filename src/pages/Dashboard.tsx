@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { apiService } from '../services/api';
@@ -40,7 +38,6 @@ ChartJS.register(
   Legend
 );
 
-// Safe date formatting
 const safeFormatDate = (date: string | null | undefined, formatStr: string) => {
   if (!date) return 'N/A';
   try {
@@ -86,43 +83,19 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Demo data for token stats
-  const demoTokenStats: DashboardStats = {
-    totalDomains: 5,
-    totalTokens: 12450,
-    totalKbEntries: 250.75,
-    totalRequests: 312,
-    dateWiseTokens: Array.from({ length: 30 }, (_, i) => ({
-      // _id: `${i}`,
-      tokens: Math.floor(Math.random() * 500),
-      // cost: Math.random() * 10,
-      // requests: Math.floor(Math.random() * 50),
-      date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString()
-    })),
-    usageByDomain: [
-      { tokens: 4000, cost: 80, requests: 100, domain: { name: 'Domain A' } },
-      { tokens: 3000, cost: 60, requests: 80, domain: { name: 'Domain B' } },
-      { tokens: 2500, cost: 50, requests: 60, domain: { name: 'Domain C' } },
-      { tokens: 2000, cost: 40, requests: 40, domain: { name: 'Domain D' } },
-      { tokens: 950, cost: 20, requests: 32, domain: { name: 'Domain E' } },
-    ]
-  };
-
  const fetchDashboardData = async () => {
   try {
-    // ✅ Call your API
     const data = await apiService.getDashboardData();
 
-    // ✅ Map API response → DashboardStats
     const mappedStats: DashboardStats = {
-      totalDomains: data?.totalTenants || 0,  // tenants = domains
+      totalDomains: data?.totalTenants || 0, 
       totalTokens: Number(data?.totalTokens) || 0,
       totalKbEntries: data?.totalKBEntries,
       totalRequests: Number(data?.totalChatMessageResult) || 0,
       dateWiseTokens: (data?.dateWiseTokens || []).map((item: any) => ({
         tokens: Number(item?.tokens) || 0,
-        cost: 0, // not provided in API
-        requests: 0, // not provided in API
+        cost: 0, 
+        requests: 0, 
         date: item?.date
       })),
 usageByDomain: data?.domainWiseTokens || []
@@ -130,7 +103,6 @@ usageByDomain: data?.domainWiseTokens || []
 
     setStats(mappedStats);
 
-    // (optional) if you still want domains preview table:
     const domainsData = await apiService.getDomains({ limit: 5 });
     setDomains(domainsData.tenants || []);
 
@@ -152,12 +124,10 @@ usageByDomain: data?.domainWiseTokens || []
     fetchDashboardData();
   };
 
-  // --- chart setup remains the same ---
   const lineChartData = {
     labels: stats.dateWiseTokens.map(item => safeFormatDate(item.date, 'MMM dd')),
     datasets: [
       {
-        // label: 'Tokens Used',
         data: stats.dateWiseTokens.map(item => item.tokens),
         borderColor: 'rgb(59, 130, 246)',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',

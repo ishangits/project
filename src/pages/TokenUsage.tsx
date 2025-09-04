@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/api';
 import { Search, Download, DollarSign, Activity, TrendingUp } from 'lucide-react';
@@ -20,7 +17,6 @@ import { format, subDays } from 'date-fns';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend);
 
-// ---------------- Types ----------------
 interface Domain {
   id: string;
   _id?: string;
@@ -44,7 +40,6 @@ interface TokenStats {
   usageByDomain: Array<{ _id?: string; tokens: number; cost: number; requests: number; domain: { name: string } }>;
 }
 
-// ---------------- Component ----------------
 const TokenUsage: React.FC = () => {
   const [domains, setDomains] = useState<Domain[]>([]);
   const [logs, setLogs] = useState<TokenLog[]>([]);
@@ -64,7 +59,6 @@ const TokenUsage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // ---------------- Helpers ----------------
   const safeFormatDate = (dateStr: string, fmt = 'MMM dd') => {
     const date = new Date(dateStr);
     return isNaN(date.getTime()) ? 'Invalid Date' : format(date, fmt);
@@ -90,7 +84,6 @@ const TokenUsage: React.FC = () => {
     }
   };
 
-  // ---------------- Mock API Calls ----------------
   const fetchTokenLogs = async (page = 1) => {
     setLoading(true);
     await new Promise(r => setTimeout(r, 500)); // simulate delay

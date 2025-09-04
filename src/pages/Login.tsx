@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -111,12 +110,6 @@ const Login: React.FC = () => {
               </button>
             </div>
           </div>
-          
-          {/* <div className="text-center">
-            <p className="text-xs text-gray-500">
-              Demo credentials: admin@chatbot.com / admin123
-            </p>
-          </div> */}
         </form>
       </div>
     </div>
