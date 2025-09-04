@@ -771,6 +771,8 @@ if (key === "openai_api_key") {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {new Date(domain.createdAt).toLocaleDateString()}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+
                          <button
                               onClick={() => handleFetchDomain(domain.id)}
                               className="px-6 py-4 text-green-600 hover:text-green-900"
@@ -778,6 +780,7 @@ if (key === "openai_api_key") {
                             >
                               Fetch Web Pages
                             </button>
+                            </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-3">
                             <button

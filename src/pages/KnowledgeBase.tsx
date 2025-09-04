@@ -82,8 +82,8 @@ const KnowledgeBase: React.FC = () => {
   const [itemsPerPage] = useState(10);
   const [filteredEntries, setFilteredEntries] = useState<KBEntry[]>([]);
   const [activeView, setActiveView] = useState<"kb" | "domain">("kb");
-    const [training, setTraining] = useState(false);
-  
+  const [training, setTraining] = useState(false);
+
   const fetchDomains = async () => {
     try {
       const response = await apiService.getDomains({ limit: 100 });
@@ -134,26 +134,26 @@ const KnowledgeBase: React.FC = () => {
     }
   };
 
-const handleFetchDomain = async (tenantId: string, urlId: string) => {
-      setTraining(true);
-  
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) throw new Error("You are not logged in");
-        const response = await Promise.race([
-          apiService.trainDomain({ tenantId, urlId }, token),
-        ]);
-        toast.success("Training Success");
-      } catch (error: any) {
-        toast.error(
-          error.message ||
-          error.response?.data?.message ||
-          "Training failed"
-        );
-      } finally {
-        setTraining(false);
-      }
-    };
+  const handleFetchDomain = async (tenantId: string, urlId: string) => {
+    setTraining(true);
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("You are not logged in");
+      const response = await Promise.race([
+        apiService.trainDomain({ tenantId, urlId }, token),
+      ]);
+      toast.success("Training Success");
+    } catch (error: any) {
+      toast.error(
+        error.message ||
+        error.response?.data?.message ||
+        "Training failed"
+      );
+    } finally {
+      setTraining(false);
+    }
+  };
 
   const fetchDomainEntries = async (domainId: string, page: number = 1) => {
     if (!domainId) return;
@@ -535,7 +535,7 @@ const handleFetchDomain = async (tenantId: string, urlId: string) => {
                         {(searchTerm || typeFilter) && <span> (filtered)</span>}
                       </div>
                       <div className="flex space-x-2">
-                          <button
+                        <button
                           onClick={() => setCurrentPage(1)}
                           disabled={currentPage === 1}
                           className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 hover:bg-gray-50"
@@ -563,7 +563,7 @@ const handleFetchDomain = async (tenantId: string, urlId: string) => {
                         >
                           Last Page
                         </button>
-                        
+
                       </div>
                     </div>
 
@@ -594,7 +594,7 @@ const handleFetchDomain = async (tenantId: string, urlId: string) => {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Created At
                         </th>
-                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Actions
                         </th>
                       </tr>
@@ -622,15 +622,15 @@ const handleFetchDomain = async (tenantId: string, urlId: string) => {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {new Date(entry.created_at).toLocaleDateString()}
                             </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
 
-                             <button
-                              onClick={() => handleFetchDomain(selectedDomain, entry.id.toString())}
-                              className="px-6 py-4 text-green-600 hover:text-green-900"
-                              title="Train Model"
-                            >
-                              Train
-                            </button>
+                              <button
+                                onClick={() => handleFetchDomain(selectedDomain, entry.id.toString())}
+                                className="px-6 py-4 text-green-600 hover:text-green-900"
+                                title="Train Model"
+                              >
+                                Train
+                              </button>
                             </td>
                           </tr>
                         ))
@@ -660,14 +660,14 @@ const handleFetchDomain = async (tenantId: string, urlId: string) => {
                         Page {domainCurrentPage} of {domainTotalPages}
                       </div>
                       <div className="flex space-x-2">
-                         <button
+                        <button
                           onClick={() => setDomainCurrentPage(1)}
                           disabled={domainCurrentPage === 1}
                           className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 hover:bg-gray-50"
                         >
                           First Page
                         </button>
-                        
+
                         <button
                           onClick={() => setDomainCurrentPage(domainCurrentPage - 1)}
                           disabled={domainCurrentPage === 1}
