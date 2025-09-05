@@ -25,11 +25,6 @@ interface FormData {
   name: string;
   domain: string;
   openai_api_key: string;
-  dbIP: string;
-  dbPort: string;
-  dbUserName: string;
-  dbPass: string;
-  dbName: string;
   status: string;
 }
 interface Domain {
@@ -40,11 +35,6 @@ interface Domain {
   domainId: string;
   apiEndpoint: string;
   authToken: string;
-  dbIP: string;
-  dbPort: string;
-  dbUserName: string;
-  dbPass: string;
-  dbName: string;
   knowledgeBaseUpdatedAt: string | null;
   status: string;
   createdAt: string;
@@ -75,11 +65,6 @@ const Domains: React.FC = () => {
     name: "",
     domain: "",
     openai_api_key: "",
-    dbIP: "",
-    dbPort: "",
-    dbUserName: "",
-    dbPass: "",
-    dbName: "",
     status: "Active",
   });
   //embedded snippet
@@ -91,7 +76,7 @@ const Domains: React.FC = () => {
     position: "bottom-right",
     greetingMessage: "Hello! How can I help you today?",
     showBranding: true,
-    brandingText: "YourCompany", 
+    brandingText: "YourCompany",
   });
 
   const EmbedModal = ({
@@ -443,7 +428,7 @@ const Domains: React.FC = () => {
         sortBy: "createdAt",
         sortOrder: "desc",
       });
-      setAllDomains(response.tenants); 
+      setAllDomains(response.tenants);
       setDomains(response.tenants);
       setFilteredDomains(response.tenants);
       setTotalPages(response.totalPages);
@@ -471,11 +456,6 @@ const Domains: React.FC = () => {
         name: "name",
         domain: "domain",
         status: "status",
-        dbIP: "dbIP",
-        dbPort: "dbPort",
-        dbUserName: "dbUserName",
-        dbPass: "dbPass",
-        dbName: "dbName",
         openai_api_key: "apiKey",
       };
 
@@ -486,30 +466,22 @@ const Domains: React.FC = () => {
 
         Object.keys(fieldMap).forEach((key) => {
           const value = formData[key as keyof typeof formData];
-if (key === "openai_api_key") {
-    if (value && isValidApiKey(value)) {
-      payload[fieldMap[key]] = value;
-    }
-   
-    return;
-  }
-           
-          if (value !== "" && value !== null && value !== undefined) {
-            payload[fieldMap[key]] = key === "dbPort" ? Number(value) : value;
+          if (key === "openai_api_key") {
+            if (value && isValidApiKey(value)) {
+              payload[fieldMap[key]] = value;
+            }
+
+            return;
           }
         });
-         if (!payload.apiKey) {
-  delete payload.apiKey;
-}
+        if (!payload.apiKey) {
+          delete payload.apiKey;
+        }
 
         await apiService.updateDomain(payload);
         toast.success("Domain updated successfully!");
       } else {
-        Object.keys(fieldMap).forEach((key) => {
-          const value = formData[key as keyof typeof formData];
-          payload[fieldMap[key]] =
-            key === "dbPort" ? Number(value) || 3306 : value || "";
-        });
+       
         payload.status = payload.status || "Active";
 
         await apiService.createDomain(payload);
@@ -524,11 +496,6 @@ if (key === "openai_api_key") {
         name: "",
         domain: "",
         openai_api_key: "",
-        dbIP: "",
-        dbPort: "",
-        dbUserName: "",
-        dbPass: "",
-        dbName: "",
         status: "Active",
       });
 
@@ -587,11 +554,6 @@ if (key === "openai_api_key") {
       domain: domain.domain,
       status: domain.status,
       openai_api_key: apiKeyValue,
-      dbIP: domain.dbIP || "",
-      dbPort: domain.dbPort || "",
-      dbUserName: domain.dbUserName || "",
-      dbPass: domain.dbPass || "",
-      dbName: domain.dbName || "",
     });
     setShowModal(true);
   };
@@ -603,11 +565,6 @@ if (key === "openai_api_key") {
       name: "",
       domain: "",
       openai_api_key: "",
-      dbIP: "",
-      dbUserName: "",
-      dbPort: "",
-      dbPass: "",
-      dbName: "",
       status: "Active",
     });
     setShowModal(true);
@@ -703,13 +660,13 @@ if (key === "openai_api_key") {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Created
                     </th>
-                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Fetch All Web Pages
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
-                  
+
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -773,14 +730,14 @@ if (key === "openai_api_key") {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
 
-                         <button
-                              onClick={() => handleFetchDomain(domain.id)}
-                              className="px-6 py-4 text-green-600 hover:text-green-900"
-                              title="Train Model"
-                            >
-                              Fetch Web Pages
-                            </button>
-                            </td>
+                          <button
+                            onClick={() => handleFetchDomain(domain.id)}
+                            className="px-6 py-4 text-green-600 hover:text-green-900"
+                            title="Train Model"
+                          >
+                            Fetch Web Pages
+                          </button>
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center space-x-3">
                             <button
@@ -979,92 +936,6 @@ if (key === "openai_api_key") {
                   </p>
                 )}
               </div>
-              <div className="border-t pt-4 mt-4">
-                <h4 className="text-sm font-medium text-gray-500 mb-3">
-                  Database Connection Info
-                </h4>
-
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Database Host */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Database Host
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.dbIP}
-                      onChange={(e) =>
-                        setFormData({ ...formData, dbIP: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="localhost"
-                    />
-                  </div>
-
-                  {/* Database User */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Database User
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.dbUserName}
-                      onChange={(e) =>
-                        setFormData({ ...formData, dbUserName: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="username"
-                    />
-                  </div>
-
-                  {/* Database Password */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Database Password
-                    </label>
-                    <input
-                      type="password"
-                      value={formData.dbPass}
-                      onChange={(e) =>
-                        setFormData({ ...formData, dbPass: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="••••••••"
-                    />
-                  </div>
-
-                  {/* Database Name */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Database Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.dbName}
-                      onChange={(e) =>
-                        setFormData({ ...formData, dbName: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="database_name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Database Port
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.dbPort}
-                      onChange={(e) =>
-                        setFormData({ ...formData, dbPort: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Port"
-                    />
-                  </div>
-                </div>
-              </div>
-
               {/* Status below DB Info */}
               <div className="mt-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
