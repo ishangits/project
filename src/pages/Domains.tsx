@@ -93,10 +93,48 @@ const Domains: React.FC = () => {
     const [copied, setCopied] = useState(false);
     const embedCode = generateEmbedCode(domain);
 
-    const copyToClipboard = () => {
-      navigator.clipboard.writeText(embedCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    const handleCopy = async () => {
+      const success = await copyToClipboard(embedCode);
+      if (success) {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        toast.success('Embed code copied to clipboard!');
+      } else {
+        toast.error('Failed to copy embed code');
+      }
+    };
+
+
+    const copyToClipboard = async (text: string) => {
+      try {
+        // Modern clipboard API
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } else {
+          // Fallback for older browsers or insecure contexts
+          const textArea = document.createElement('textarea');
+          textArea.value = text;
+          textArea.style.position = 'fixed';
+          textArea.style.left = '-999999px';
+          textArea.style.top = '-999999px';
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+
+          try {
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            return successful;
+          } catch (err) {
+            document.body.removeChild(textArea);
+            return false;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to copy text: ', err);
+        return false;
+      }
     };
 
     return (
@@ -338,7 +376,7 @@ const Domains: React.FC = () => {
             <div className="flex justify-between items-center mb-2">
               <h4 className="font-medium text-gray-700">Embed Code</h4>
               <button
-                onClick={copyToClipboard}
+                onClick={handleCopy}
                 className="flex items-center text-sm text-blue-600 hover:text-blue-800"
               >
                 {copied ? "Copied!" : "Copy Code"}
@@ -481,7 +519,7 @@ const Domains: React.FC = () => {
         await apiService.updateDomain(payload);
         toast.success("Domain updated successfully!");
       } else {
-       
+
         payload.status = payload.status || "Active";
 
         await apiService.createDomain(payload);
