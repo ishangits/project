@@ -8,11 +8,11 @@ import {
   RefreshCw,
   Filter,
   Info,
-  Globe,
   Database,
   BookOpen,
-  Train,
-  Pen,
+
+  Blocks,
+  Brain,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -136,6 +136,26 @@ const KnowledgeBase: React.FC = () => {
     }
   };
 
+  const handleTrainKB = async (tenantId: string) => {
+    setTraining(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("You are not logged in");
+       const response = await Promise.race([
+        apiService.trainKB({ tenantId }, token),
+      ]);
+      toast.success("KB Training Started");
+    } catch (error: any) {
+      toast.error(
+        error.message ||
+        error.response?.data?.message ||
+        "Training failed"
+      );
+    } finally {
+      setTraining(false);
+    }
+  };
+
   const handleFetchDomain = async (tenantId: string, urlId: string) => {
     setTraining(true);
 
@@ -157,14 +177,14 @@ const KnowledgeBase: React.FC = () => {
     }
   };
 
-  const handleFetchAllDomain = async (tenantId: string, urlId: string) => {
+  const handleFetchAllDomain = async (tenantId: string) => {
     setTraining(true);
 
     try {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("You are not logged in");
       const response = await Promise.race([
-        apiService.trainDomain({ tenantId, urlId }, token),
+        apiService.trainDomain({ tenantId, urlId: 'all' }, token),
       ]);
       toast.success("Training Success");
     } catch (error: any) {
@@ -324,43 +344,53 @@ const KnowledgeBase: React.FC = () => {
         </h1>
 
         <div className="flex flex-col space-y-3">
-          {activeView === "domain" && (
-            <div className="text-sm text-red-600 font-medium flex items-center">
-              <span className="mr-1">*</span>
-              Switch to KB Entries to enable these actions
-            </div>
-          )}
-
           <div className="flex space-x-3">
+            {activeView === 'kb' && (
+              <>
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  disabled={!selectedDomain}
+                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload File
+                </button>
+
+                <button
+                  onClick={() => setShowModal(true)}
+                  disabled={!selectedDomain}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Entry
+                </button>
+
+                <button
+                onClick={()=> handleTrainKB(selectedDomain)}
+                  disabled={!selectedDomain}
+                  className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                >
+                  <Blocks className="h-4 w-4 mr-2" />
+                  Train KB
+                </button>
+              </>
+            )}
             {/* Existing Upload Button (for KB) */}
-            <button
-              onClick={() => setShowUploadModal(true)}
-              disabled={!selectedDomain || activeView !== "kb"} // Disabled if NOT on KB view
-              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Upload File
-            </button>
 
-            {/* Existing Add Entry Button (for KB) */}
-            <button
-              onClick={() => setShowModal(true)}
-              disabled={!selectedDomain || activeView !== "kb"} // Disabled if NOT on KB view
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Entry
-            </button>
 
+
+            {activeView === 'domain' && (
+              <button
+                onClick={() => handleFetchAllDomain(selectedDomain)}
+                disabled={!selectedDomain} // Disabled if ON KB view
+                className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+              >
+                <Brain className="h-4 w-4 mr-2" /> {/* You'll need a Train icon or choose another */}
+                Train All Pages
+              </button>
+            )}
             {/* New Train All Button (for non-KB views, e.g., Train) */}
-            <button
-              onClick={() => handleFetchAllDomain(selectedDomain, "all")}
-              disabled={!selectedDomain || activeView === "kb"} // Disabled if ON KB view
-              className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
-            >
-              <Pen className="h-4 w-4 mr-2" /> {/* You'll need a Train icon or choose another */}
-              Train All Pages
-            </button>
+
           </div>
         </div>
       </div>
@@ -659,9 +689,15 @@ const KnowledgeBase: React.FC = () => {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 truncate max-w-xs" title={entry.description || "N/A"}>
                               {entry.description || "N/A"}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {new Date(entry.trainAt).toLocaleDateString() || "N/A"}
-                            </td>
+ <td className="px-6 py-4 whitespace-nowrap text-sm">
+  {entry.trainAt && new Date(entry.trainAt).getTime() > 0 ? (
+    <span className="text-gray-900">
+      {new Date(entry.trainAt).toLocaleDateString()}
+    </span>
+  ) : (
+    <span className="text-gray-400 italic">Not trained yet</span>
+  )}
+</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {new Date(entry.created_at).toLocaleDateString()}
                             </td>

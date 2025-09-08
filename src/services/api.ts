@@ -158,6 +158,19 @@ class ApiService {
     );
     return response.data;
   }
+  async trainKB(payload: { tenantId: string }, token: string) {
+    const response = await this.api.post(
+      `/api/admin/ingest/all/`,
+      payload,
+      {
+        headers: {
+          token: token,
+        },
+      }
+    );
+    return response.data;
+  }
+
   async fetchDomain(payload: { tenantId: string }, token: string) {
     const response = await this.api.post(
       `/api/tenants/fetch-domain-pages`,

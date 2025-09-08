@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { apiService } from "../services/api";
 import {
   Plus,
@@ -13,6 +13,8 @@ import {
 import { toast } from "react-toastify";
 import { MessageCircle } from "lucide-react";
 import ChatbotWidget from "./ChatbotWidget";
+import debounce from "lodash.debounce";
+
 
 interface ChatState {
   isOpen: boolean;
@@ -92,6 +94,24 @@ const Domains: React.FC = () => {
   }) => {
     const [copied, setCopied] = useState(false);
     const embedCode = generateEmbedCode(domain);
+    const [greetingMessage, setGreetingMessage] = useState(config.greetingMessage);
+    const [brandingText, setBrandingText] = useState(config.brandingText);
+
+    const debouncedUpdate = useCallback(
+      debounce((field: string, value: string) => {
+        onConfigChange({
+          ...config,
+          [field]: value,
+        });
+      }, 1000),
+      [config, onConfigChange]
+    );
+
+    useEffect(() => {
+      setGreetingMessage(config.greetingMessage);
+      setBrandingText(config.brandingText);
+    }, [config.greetingMessage, config.brandingText]);
+
 
     const handleCopy = async () => {
       const success = await copyToClipboard(embedCode);
@@ -188,13 +208,11 @@ const Domains: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    value={config.greetingMessage}
-                    onChange={(e) =>
-                      onConfigChange({
-                        ...config,
-                        greetingMessage: e.target.value,
-                      })
-                    }
+                    value={greetingMessage}
+                    onChange={(e) => {
+                      setGreetingMessage(e.target.value); // live typing
+                      debouncedUpdate("greetingMessage", e.target.value); // preview update
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
                 </div>
@@ -227,13 +245,11 @@ const Domains: React.FC = () => {
                     </label>
                     <input
                       type="text"
-                      value={config.brandingText || ""}
-                      onChange={(e) =>
-                        onConfigChange({
-                          ...config,
-                          brandingText: e.target.value,
-                        })
-                      }
+                      value={brandingText}
+                      onChange={(e) => {
+                        setBrandingText(e.target.value); // live typing
+                        debouncedUpdate("brandingText", e.target.value); // preview update
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       placeholder="YourCompany (default)"
                     />
@@ -422,7 +438,7 @@ const Domains: React.FC = () => {
     
     // Load chatbot script
     var script = document.createElement('script');
-    script.src = '/chatbot-widget.js'; 
+    script.src = 'http://65.2.3.52/static/chatbot-widget.js';
     script.onload = function() {
       window.initChatbotWidget(chatbotConfig);
     };
@@ -478,6 +494,8 @@ const Domains: React.FC = () => {
       setLoading(false);
     }
   };
+
+
 
   useEffect(() => {
     fetchDomains(currentPage);
