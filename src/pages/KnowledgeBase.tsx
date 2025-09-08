@@ -332,36 +332,36 @@ const KnowledgeBase: React.FC = () => {
           )}
 
           <div className="flex space-x-3">
-  {/* Existing Upload Button (for KB) */}
-  <button
-    onClick={() => setShowUploadModal(true)}
-    disabled={!selectedDomain || activeView !== "kb"} // Disabled if NOT on KB view
-    className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-  >
-    <Upload className="h-4 w-4 mr-2" />
-    Upload File
-  </button>
+            {/* Existing Upload Button (for KB) */}
+            <button
+              onClick={() => setShowUploadModal(true)}
+              disabled={!selectedDomain || activeView !== "kb"} // Disabled if NOT on KB view
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Upload File
+            </button>
 
-  {/* Existing Add Entry Button (for KB) */}
-  <button
-    onClick={() => setShowModal(true)}
-    disabled={!selectedDomain || activeView !== "kb"} // Disabled if NOT on KB view
-    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-  >
-    <Plus className="h-4 w-4 mr-2" />
-    Add Entry
-  </button>
+            {/* Existing Add Entry Button (for KB) */}
+            <button
+              onClick={() => setShowModal(true)}
+              disabled={!selectedDomain || activeView !== "kb"} // Disabled if NOT on KB view
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Entry
+            </button>
 
-  {/* New Train All Button (for non-KB views, e.g., Train) */}
-  <button
-    onClick={() => handleFetchAllDomain(selectedDomain, "all")}
-    disabled={!selectedDomain || activeView === "kb"} // Disabled if ON KB view
-    className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
-  >
-    <Pen className="h-4 w-4 mr-2" /> {/* You'll need a Train icon or choose another */}
-    Train All Pages
-  </button>
-</div>
+            {/* New Train All Button (for non-KB views, e.g., Train) */}
+            <button
+              onClick={() => handleFetchAllDomain(selectedDomain, "all")}
+              disabled={!selectedDomain || activeView === "kb"} // Disabled if ON KB view
+              className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+            >
+              <Pen className="h-4 w-4 mr-2" /> {/* You'll need a Train icon or choose another */}
+              Train All Pages
+            </button>
+          </div>
         </div>
       </div>
 
@@ -624,7 +624,7 @@ const KnowledgeBase: React.FC = () => {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Title
                         </th>
-                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Description
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -656,7 +656,7 @@ const KnowledgeBase: React.FC = () => {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 truncate max-w-xs" title={entry.title || "N/A"}>
                               {entry.title || "N/A"}
                             </td>
-                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 truncate max-w-xs" title={entry.description || "N/A"}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 truncate max-w-xs" title={entry.description || "N/A"}>
                               {entry.description || "N/A"}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -812,6 +812,15 @@ const KnowledgeBase: React.FC = () => {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {training && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent"></div>
+          <span className="ml-4 text-white font-medium">
+            Training Started...
+          </span>
         </div>
       )}
 
