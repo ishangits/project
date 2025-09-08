@@ -542,9 +542,12 @@ const Domains: React.FC = () => {
       await apiService.createDomain(payload);
       toast.success("Domain created successfully!");
     } else {
-      payload.id = formData.id;
-      await apiService.updateDomain(payload);
-      toast.success("Domain updated successfully!");
+      const { id} = formData;
+      const payloadToUpdate = {...payload, id};
+
+      const {domain, name, status, ...rest} = payloadToUpdate;
+        await apiService.updateDomain(rest);
+  toast.success("Domain updated successfully!");
     }
 
     // Reset form
@@ -941,6 +944,7 @@ const Domains: React.FC = () => {
                   type="text"
                   required
                   value={formData.name}
+readOnly={!!editingDomain}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -961,6 +965,8 @@ const Domains: React.FC = () => {
                   type="domain"
                   required
                   value={formData.domain}
+                  readOnly={!!editingDomain}
+
                   onChange={(e) =>
                     setFormData({ ...formData, domain: e.target.value })
                   }
@@ -1003,6 +1009,7 @@ const Domains: React.FC = () => {
                 </label>
                 <select
                   value={formData.status}
+                  disabled={!!editingDomain} 
                   onChange={(e) =>
                     setFormData({ ...formData, status: e.target.value })
                   }
@@ -1024,6 +1031,9 @@ const Domains: React.FC = () => {
                 </button>
                 <button
                   type="submit"
+                    disabled={
+              !!editingDomain && (!apiKeyTouched || !formData.openai_api_key) // 🚫 disable until key typed
+            }
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
                   {editingDomain ? "Update" : "Create"}
