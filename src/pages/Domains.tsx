@@ -501,66 +501,70 @@ const Domains: React.FC = () => {
     fetchDomains(currentPage);
   }, [currentPage]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if ((!editingDomain || apiKeyTouched) && formData.openai_api_key && !isValidApiKey(formData.openai_api_key)) {
-      toast.error("Please enter a valid OpenAI API key format (typically starts with sk-...)");
-      return;
-    }
-    try {
-      const fieldMap: Record<string, string> = {
-        name: "name",
-        domain: "domain",
-        status: "status",
-        openai_api_key: "apiKey",
-      };
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-      let payload: any = {};
+  // Validate API key if it's touched or for a new domain
+  if ((!editingDomain || apiKeyTouched) && formData.openai_api_key && !isValidApiKey(formData.openai_api_key)) {
+    toast.error("Please enter a valid OpenAI API key format (typically starts with sk-...)");
+    return;
+  }
 
-      if (editingDomain) {
-        payload.id = formData.id;
+  try {
+    const fieldMap: Record<string, string> = {
+      name: "name",
+      domain: "domain",
+      status: "status",
+      openai_api_key: "apiKey",
+    };
 
-        Object.keys(fieldMap).forEach((key) => {
-          const value = formData[key as keyof typeof formData];
-          if (key === "openai_api_key") {
-            if (value && isValidApiKey(value)) {
-              payload[fieldMap[key]] = value;
-            }
+    const payload: any = {};
 
-            return;
-          }
-        });
-        if (!payload.apiKey) {
-          delete payload.apiKey;
+    // Map all form fields
+    Object.keys(fieldMap).forEach((key) => {
+      const value = formData[key as keyof typeof formData];
+
+      if (key === "openai_api_key") {
+        if (value && isValidApiKey(value)) {
+          payload[fieldMap[key]] = value;
         }
-
-        await apiService.updateDomain(payload);
-        toast.success("Domain updated successfully!");
-      } else {
-
-        payload.status = payload.status || "Active";
-
-        await apiService.createDomain(payload);
-        toast.success("Domain created successfully!");
+        return;
       }
 
-      // Reset form
-      setShowModal(false);
-      setEditingDomain(null);
-      setFormData({
-        id: "",
-        name: "",
-        domain: "",
-        openai_api_key: "",
-        status: "Active",
-      });
+      if (value !== undefined) {
+        payload[fieldMap[key]] = value;
+      }
+    });
 
-      fetchDomains(currentPage);
-    } catch (error: any) {
-      console.error("Error saving domain:", error);
-      toast.error(error?.response?.data?.message || "Failed to save domain");
+    // Ensure status defaults to "Active" for new domains
+    if (!editingDomain) {
+      payload.status = payload.status || "Active";
+      await apiService.createDomain(payload);
+      toast.success("Domain created successfully!");
+    } else {
+      payload.id = formData.id;
+      await apiService.updateDomain(payload);
+      toast.success("Domain updated successfully!");
     }
-  };
+
+    // Reset form
+    setShowModal(false);
+    setEditingDomain(null);
+    setFormData({
+      id: "",
+      name: "",
+      domain: "",
+      openai_api_key: "",
+      status: "Active",
+    });
+
+    fetchDomains(currentPage);
+  } catch (error: any) {
+    console.error("Error saving domain:", error);
+    toast.error(error?.response?.data?.message || "Failed to save domain");
+  }
+};
+
 
   const isValidApiKey = (key: string): boolean => {
     const apiKeyRegex = /^sk-[a-zA-Z0-9_-]{20,}$/;
