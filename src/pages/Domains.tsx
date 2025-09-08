@@ -438,7 +438,7 @@ const Domains: React.FC = () => {
     
     // Load chatbot script
     var script = document.createElement('script');
-    script.src = 'http://65.2.3.52/static/chatbot-widget.js';
+    script.src = 'http://65.2.3.52/chatbot/chatbot-widget.js';
     script.onload = function() {
       window.initChatbotWidget(chatbotConfig);
     };
