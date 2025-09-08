@@ -422,7 +422,7 @@ const Domains: React.FC = () => {
     
     // Load chatbot script
     var script = document.createElement('script');
-    script.src = 'http://65.2.3.52/chatbot-widget.js'; 
+    script.src = '/chatbot-widget.js'; 
     script.onload = function() {
       window.initChatbotWidget(chatbotConfig);
     };
@@ -771,7 +771,7 @@ const Domains: React.FC = () => {
                           <button
                             onClick={() => handleFetchDomain(domain.id)}
                             className="px-6 py-4 text-green-600 hover:text-green-900"
-                            title="Train Model"
+                            title="Crawl Domain"
                           >
                             Fetch Web Pages
                           </button>
@@ -844,7 +844,7 @@ const Domains: React.FC = () => {
               <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
                 <div className="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent"></div>
                 <span className="ml-4 text-white font-medium">
-                  Training in progress...
+                  Crawling Domain...
                 </span>
               </div>
             )}

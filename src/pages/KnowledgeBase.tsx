@@ -11,6 +11,8 @@ import {
   Globe,
   Database,
   BookOpen,
+  Train,
+  Pen,
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -135,6 +137,27 @@ const KnowledgeBase: React.FC = () => {
   };
 
   const handleFetchDomain = async (tenantId: string, urlId: string) => {
+    setTraining(true);
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("You are not logged in");
+      const response = await Promise.race([
+        apiService.trainDomain({ tenantId, urlId }, token),
+      ]);
+      toast.success("Training Success");
+    } catch (error: any) {
+      toast.error(
+        error.message ||
+        error.response?.data?.message ||
+        "Training failed"
+      );
+    } finally {
+      setTraining(false);
+    }
+  };
+
+  const handleFetchAllDomain = async (tenantId: string, urlId: string) => {
     setTraining(true);
 
     try {
@@ -309,23 +332,36 @@ const KnowledgeBase: React.FC = () => {
           )}
 
           <div className="flex space-x-3">
-            <button
-              onClick={() => setShowUploadModal(true)}
-              disabled={!selectedDomain || activeView !== "kb"}
-              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Upload File
-            </button>
-            <button
-              onClick={() => setShowModal(true)}
-              disabled={!selectedDomain || activeView !== "kb"}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Entry
-            </button>
-          </div>
+  {/* Existing Upload Button (for KB) */}
+  <button
+    onClick={() => setShowUploadModal(true)}
+    disabled={!selectedDomain || activeView !== "kb"} // Disabled if NOT on KB view
+    className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+  >
+    <Upload className="h-4 w-4 mr-2" />
+    Upload File
+  </button>
+
+  {/* Existing Add Entry Button (for KB) */}
+  <button
+    onClick={() => setShowModal(true)}
+    disabled={!selectedDomain || activeView !== "kb"} // Disabled if NOT on KB view
+    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+  >
+    <Plus className="h-4 w-4 mr-2" />
+    Add Entry
+  </button>
+
+  {/* New Train All Button (for non-KB views, e.g., Train) */}
+  <button
+    onClick={() => handleFetchAllDomain(selectedDomain, "all")}
+    disabled={!selectedDomain || activeView === "kb"} // Disabled if ON KB view
+    className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+  >
+    <Pen className="h-4 w-4 mr-2" /> {/* You'll need a Train icon or choose another */}
+    Train All Pages
+  </button>
+</div>
         </div>
       </div>
 
