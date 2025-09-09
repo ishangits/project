@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { apiService } from '../services/api';
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface ChatbotWidgetProps {
   tenantId: string;
@@ -131,7 +133,9 @@ const sendMessage = async () => {
               className={`message ${message.isUser ? 'user-message' : 'bot-message'}`}
             >
               <div className="message-bubble">
-                {message.text}
+                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
+    {message.text}
+  </ReactMarkdown>
               </div>
               <div className="message-time">
                 {message.timestamp.toLocaleTimeString([], { 
@@ -294,6 +298,16 @@ const sendMessage = async () => {
           color: #495057;
           border-bottom-left-radius: 4px;
         }
+
+          .bot-message .message-bubble ul {
+  margin-left: 16px;
+  list-style-type: disc;
+}
+
+.bot-message .message-bubble a {
+  color: #667eea;
+  text-decoration: underline;
+}
 
         .message-time {
           font-size: 11px;

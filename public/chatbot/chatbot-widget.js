@@ -118,13 +118,41 @@ window.initChatbotWidget = function(config) {
         border-top: 1px solid #e1e8ed;
         background: #f8f9fa;
       ">
-  Powered by <strong>${config.brandingText || "YourCompany"}</strong>
+        Powered by <strong>${config.brandingText || "YourCompany"}</strong>
       </div>
       ` : ''}
     </div>
   `;
   
   container.appendChild(widget);
+
+  // Inject CSS for bot message formatting
+  const style = document.createElement('style');
+  style.textContent = `
+    .bot-message h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 6px 0 4px;
+      color: #333;
+    }
+     .bot-message ul, .bot-message ol {
+    margin: 6px 0 6px 18px;
+    padding: 0;
+  }
+    .bot-message li {
+    margin-bottom: 4px;
+    line-height: 1.4;
+  }
+    .bot-message a {
+      color: ${config.themeColor};
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .bot-message a:hover {
+      text-decoration: underline;
+    }
+  `;
+  document.head.appendChild(style);
   
   const messagesContainer = widget.querySelector('.messages-container');
   const botMessage = createMessage(config.greetingMessage, false);
@@ -153,7 +181,6 @@ window.initChatbotWidget = function(config) {
     const userMessage = createMessage(message, true);
     messagesContainer.appendChild(userMessage);
     messageInput.value = '';
-    
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
     
     const typingIndicator = createTypingIndicator();
@@ -171,9 +198,7 @@ window.initChatbotWidget = function(config) {
             'Content-Type': 'application/json',
             'tenantid': config.tenantId,
           },
-          body: JSON.stringify({
-            user_id: randomUserId
-          })
+          body: JSON.stringify({ user_id: randomUserId })
         });
         
         const sessionData = await sessionResponse.json();
@@ -194,7 +219,6 @@ window.initChatbotWidget = function(config) {
       });
       
       const data = await response.json();
-      
       messagesContainer.removeChild(typingIndicator);
       const botMessage = createMessage(data.reply || 'Sorry, I did not understand.', false);
       messagesContainer.appendChild(botMessage);
@@ -203,7 +227,6 @@ window.initChatbotWidget = function(config) {
     } catch (error) {
       console.error('Error:', error);
       messagesContainer.removeChild(typingIndicator);
-      
       const errorMessage = createMessage('Sorry, I encountered an error. Please try again.', false);
       messagesContainer.appendChild(errorMessage);
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -212,14 +235,12 @@ window.initChatbotWidget = function(config) {
   
   sendButton.addEventListener('click', sendMessage);
   messageInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      sendMessage();
-    }
+    if (e.key === 'Enter') sendMessage();
   });
   
   function createMessage(text, isUser) {
     const messageEl = document.createElement('div');
-    messageEl.className = 'message';
+    messageEl.className = `message ${isUser ? "user-message" : "bot-message"}`;
     messageEl.style.cssText = `
       display: flex;
       flex-direction: column;
@@ -241,7 +262,12 @@ window.initChatbotWidget = function(config) {
       color: ${isUser ? 'white' : '#495057'};
       border-bottom-${isUser ? 'right' : 'left'}-radius: 4px;
     `;
-    bubble.textContent = text;
+    
+    if (isUser) {
+      bubble.textContent = text;
+    } else {
+      bubble.innerHTML = marked.parse(text);
+    }
     
     const time = document.createElement('div');
     time.className = 'message-time';
@@ -251,14 +277,10 @@ window.initChatbotWidget = function(config) {
       margin-top: 4px;
       padding: 0 4px;
     `;
-    time.textContent = new Date().toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
     messageEl.appendChild(bubble);
     messageEl.appendChild(time);
-    
     return messageEl;
   }
   
@@ -284,10 +306,7 @@ window.initChatbotWidget = function(config) {
     
     const dots = document.createElement('div');
     dots.className = 'typing-dots';
-    dots.style.cssText = `
-      display: flex;
-      gap: 4px;
-    `;
+    dots.style.cssText = `display: flex; gap: 4px;`;
     
     for (let i = 0; i < 3; i++) {
       const dot = document.createElement('span');

@@ -715,7 +715,7 @@ const KnowledgeBase: React.FC = () => {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={4} className="px-6 py-24 text-center">
+                          <td colSpan={6} className="px-6 py-24 text-center">
                             <div className="flex flex-col items-center justify-center text-gray-500">
                               <Search className="h-12 w-12 mb-4 text-gray-300" />
                               <h3 className="text-lg font-medium mb-1">

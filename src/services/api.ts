@@ -106,7 +106,7 @@ class ApiService {
   logout() {
     localStorage.removeItem("token");
     this.clearAuthToken();
-    alert("⚠️ Your session has expired. Please log in again.");
+   toast.error("⚠️ Your session has expired. Please log in again.");
     window.location.href = "/login";
   }
 
@@ -207,6 +207,19 @@ class ApiService {
     const response = await this.api.get(`/api/tenants/tenant-crawl-pages/${domainId}/${page}`);
     return response.data
   }
+
+  async deleteTenant(tenantId: string, token: string) {
+  const response = await this.api.delete(
+    `/api/admin/delete-talnet`,
+    {
+      headers: {
+        token: token,
+      },
+      data: { tenantId }, // DELETE with body
+    }
+  );
+  return response.data;
+}
 
   async createKBEntry(
     domainId: string,

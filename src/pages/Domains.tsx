@@ -9,6 +9,7 @@ import {
   Calendar,
   Code,
   Clipboard,
+  Trash,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { MessageCircle } from "lucide-react";
@@ -55,6 +56,9 @@ const Domains: React.FC = () => {
   const [filteredDomains, setFilteredDomains] = useState<Domain[]>([]);
   const [itemsPerPage] = useState(10);
   const [apiKeyTouched, setApiKeyTouched] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+
 
 
   const [chatState, setChatState] = useState<ChatState>({
@@ -426,6 +430,7 @@ const Domains: React.FC = () => {
     return `
 <!-- Start of Chatbot Widget -->
 <div id="chatbot-widget-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
   (function() {
     var chatbotConfig = {
@@ -472,6 +477,13 @@ const Domains: React.FC = () => {
       sessionId: null,
     });
   };
+
+  const confirmDelete = (tenantId: string) => {
+  setSelectedTenantId(tenantId);
+  setShowDeleteModal(true);
+};
+
+  
 
   const fetchDomains = async (page = 1) => {
     try {
@@ -620,6 +632,30 @@ const Domains: React.FC = () => {
     });
     setShowModal(true);
   };
+
+ const handleDeleteConfirm = async () => {
+  if (!selectedTenantId) return;
+
+  try {
+    const token = localStorage.getItem("token") || "";
+    await apiService.deleteTenant(selectedTenantId, token);
+
+    toast.success("Tenant deleted successfully!");
+    fetchDomains();
+  } catch (error: any) {
+    toast.error(error.message || "Failed to delete tenant");
+    console.error("Delete error:", error);
+  } finally {
+    setShowDeleteModal(false);
+    setSelectedTenantId(null);
+  }
+};
+
+const handleDeleteCancel = () => {
+  setShowDeleteModal(false);
+  setSelectedTenantId(null);
+};
+
 
   const openModal = () => {
     setEditingDomain(null);
@@ -825,6 +861,12 @@ const Domains: React.FC = () => {
                             >
                               <Code className="h-4 w-4" />
                             </button>
+                             <button onClick={() => confirmDelete(domain.id)}
+                              className="text-purple-600 hover:text-purple-900"
+                              title="Delete Domain"
+                            >
+                              <Trash className="h-4 w-4" />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -927,6 +969,30 @@ const Domains: React.FC = () => {
           </>
         )}
       </div>
+
+{showDeleteModal && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+    <div className="bg-white rounded-2xl shadow-lg p-6 w-96">
+      <h2 className="text-lg font-bold text-gray-900 mb-4">Confirm Delete</h2>
+      <p className="text-gray-600 mb-6">Are you sure you want to delete this tenant?</p>
+
+      <div className="flex justify-end space-x-4">
+        <button
+          onClick={handleDeleteCancel}
+          className="px-4 py-2 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleDeleteConfirm}
+          className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white"
+        >
+          Yes, Delete
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Add/Edit Modal */}
       {showModal && (
