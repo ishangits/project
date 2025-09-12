@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { apiService } from '../services/api';
 import {
   Users,
   Activity,
-  DollarSign,
   TrendingUp,
-  Calendar,
-  ExternalLink,
   RefreshCw,
   Book
 } from 'lucide-react';
