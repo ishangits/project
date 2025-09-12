@@ -54,7 +54,7 @@ const DomainTable: React.FC<DomainTableProps> = ({
         </div>
       ) : (
         <>
-          <div className="p-6">
+          <div className="p-6 border-b border-gray-200">
             <form className="flex gap-4 items-center">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -88,28 +88,28 @@ const DomainTable: React.FC<DomainTableProps> = ({
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-8 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Domain
                   </th>
-                  <th className="px-8 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-8 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     KB Last Updated
                   </th>
-                  <th className="px-8 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Created
                   </th>
-                  <th className="px-8 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fetch All Web Pages
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Crawling
                   </th>
-                   <th className="px-8 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Pages Crawled
                   </th>
-                   <th className="px-8 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Crawling Status
                   </th>
-                  <th className="px-8 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -129,7 +129,7 @@ const DomainTable: React.FC<DomainTableProps> = ({
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-6 py-24 text-center">
+                    <td colSpan={8} className="px-6 py-24 text-center">
                       <div className="flex flex-col items-center justify-center text-gray-500">
                         <Search className="h-12 w-12 mb-4 text-gray-300" />
                         <h3 className="text-lg font-medium mb-1">

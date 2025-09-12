@@ -21,19 +21,19 @@ const DomainRow: React.FC<DomainRowProps> = ({
 }) => {
   return (
     <tr key={domain.id || domain.name} className="hover:bg-gray-50">
-      <td className="px-8 py-4 whitespace-nowrap">
+      <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center">
           <div className="flex-shrink-0 h-10 w-10">
             <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
               <Globe className="h-5 w-5 text-blue-600" />
             </div>
           </div>
-          <div className="ml-4">
-            <div className="text-sm font-medium text-gray-900">
+          <div className="ml-4 min-w-0 flex-1">
+            <div className="text-sm font-medium text-gray-900 truncate">
               {domain.name.toUpperCase()}
             </div>
             <div className="text-sm text-gray-500 flex items-center">
-              <ExternalLink className="h-3 w-3 mr-1" />
+              <ExternalLink className="h-3 w-3 mr-1 flex-shrink-0" />
               <a
                 href={domain.domain}
                 target="_blank"
@@ -46,7 +46,7 @@ const DomainRow: React.FC<DomainRowProps> = ({
           </div>
         </div>
       </td>
-      <td className="px-8 py-4 whitespace-nowrap">
+      <td className="px-6 py-4 whitespace-nowrap">
         <span
           className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${domain.status === "Active"
             ? "bg-green-100 text-green-800"
@@ -58,7 +58,7 @@ const DomainRow: React.FC<DomainRowProps> = ({
           {domain.status}
         </span>
       </td>
-      <td className="px-8 py-4 whitespace-nowrap text-sm text-gray-500">
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
         <div className="flex flex-col">
           <div className="flex items-center mb-1">
             <Calendar className="h-4 w-4 mr-1" />
@@ -70,22 +70,22 @@ const DomainRow: React.FC<DomainRowProps> = ({
           </div>
         </div>
       </td>
-      <td className="px-8 py-4 whitespace-nowrap text-sm text-gray-500">
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
         {new Date(domain.createdAt).toLocaleDateString()}
       </td>
-      <td className="px-8 py-4 whitespace-nowrap text-sm text-gray-500">
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
         <button
           onClick={() => onFetchDomain(domain.id)}
-          className="px-8 py-4 text-green-600 hover:text-green-900"
+          className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
           title="Crawl Domain"
         >
-          Fetch Web Pages
+          Crawl Domain
         </button>
       </td>
-      <td className="px-8 py-4 whitespace-nowrap text-sm text-gray-500">
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
         {domain.crawled_pages_count}
       </td>
-      <td className="px-8 py-4 whitespace-nowrap text-sm">
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
         {domain.crawl_status ? (
           <span
             className={`font-semibold ${domain.crawl_status === "in-progress"
@@ -105,7 +105,7 @@ const DomainRow: React.FC<DomainRowProps> = ({
         )}
       </td>
 
-      <td className="px-8 py-4 whitespace-nowrap text-sm font-medium">
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
         <div className="flex items-center space-x-3">
           <button
             onClick={() => onEdit(domain)}
