@@ -32,8 +32,8 @@ const DomainRow: React.FC<DomainRowProps> = ({
             <div className="text-sm font-medium text-gray-900 truncate">
               {domain.name.toUpperCase()}
             </div>
-            <div className="text-sm text-gray-500 flex items-center">
-              <ExternalLink className="h-3 w-3 mr-1 flex-shrink-0" />
+            <div className="text-sm text-gray-500 flex items-center truncate">
+              <ExternalLink className="h-3 w-3 mr-1 flex-shrink-0 " />
               <a
                 href={domain.domain}
                 target="_blank"
@@ -54,6 +54,12 @@ const DomainRow: React.FC<DomainRowProps> = ({
               ? "bg-gray-100 text-gray-800"
               : "bg-red-100 text-red-800"
             }`}
+
+
+
+          title={`Created At: ${new Date(domain.createdAt).toLocaleDateString()}`}
+
+
         >
           {domain.status}
         </span>
@@ -71,9 +77,6 @@ const DomainRow: React.FC<DomainRowProps> = ({
         </div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-        {new Date(domain.createdAt).toLocaleDateString()}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
         <button
           onClick={() => onFetchDomain(domain.id)}
           className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
@@ -89,10 +92,10 @@ const DomainRow: React.FC<DomainRowProps> = ({
         {domain.crawl_status ? (
           <span
             className={`font-semibold ${domain.crawl_status === "in-progress"
-                ? "text-yellow-600"
-                : domain.crawl_status === "completed"
-                  ? "text-green-600"
-                  : "text-gray-500"
+              ? "text-yellow-600"
+              : domain.crawl_status === "completed"
+                ? "text-green-600"
+                : "text-gray-500"
               }`}
           >
             {domain.crawl_status
