@@ -68,16 +68,16 @@ const ChartsSection: React.FC<ChartsSectionProps> = ({
 
   const chartOptions = {
     responsive: true,
-    plugins: { 
-      legend: { 
-        position: 'top' as const, 
-        display: false 
-      } 
+    plugins: {
+      legend: {
+        position: 'top' as const,
+        display: false
+      }
     },
-    scales: { 
-      y: { 
-        beginAtZero: true 
-      } 
+    scales: {
+      y: {
+        beginAtZero: true
+      }
     },
   };
 
@@ -98,7 +98,11 @@ const ChartsSection: React.FC<ChartsSectionProps> = ({
         </h3>
         <div className="h-64 flex items-center justify-center">
           {usageByDomain.length > 0 ? (
-            <Doughnut data={doughnutData} />
+            <Doughnut data={doughnutData} options={{
+              responsive: true,
+              maintainAspectRatio: false,
+            }}
+            />
           ) : (
             <p className="text-gray-500">No usage data available</p>
           )}
