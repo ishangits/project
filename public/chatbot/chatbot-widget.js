@@ -192,7 +192,7 @@ window.initChatbotWidget = function(config) {
       
       if (!sessionId) {
         const randomUserId = Math.floor(Math.random() * 10000).toString();
-        const sessionResponse = await fetch('http://65.2.3.52:3000/v1/open/', {
+const sessionResponse = await fetch(`${config.apiBase}/v1/open/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -206,7 +206,7 @@ window.initChatbotWidget = function(config) {
         localStorage.setItem(`chat_session_${config.tenantId}`, sessionId);
       }
       
-      const response = await fetch('http://65.2.3.52:3000/v1/chat', {
+      const response = await fetch(`${config.apiBase}/v1/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

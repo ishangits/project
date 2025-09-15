@@ -92,12 +92,14 @@ const EmbedModal: React.FC<EmbedModalProps> = ({
       themeColor: "${config.themeColor}",
       position: "${config.position}",
       greetingMessage: "${config.greetingMessage}",
-      brandingText: "${config.brandingText || "YourCompany"}"
+      brandingText: "${config.brandingText || "YourCompany"}",
+      apiBase: "${import.meta.env.VITE_TENANT_API_BASE}",
+
     };
     
     // Load chatbot script
     var script = document.createElement('script');
-    script.src = 'http://65.2.3.52/chatbot/chatbot-widget.js';
+script.src = "${import.meta.env.VITE_TENANT_API_BASE}/chatbot/chatbot-widget.js";
     script.onload = function() {
       window.initChatbotWidget(chatbotConfig);
     };
