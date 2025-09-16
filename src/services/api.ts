@@ -5,7 +5,6 @@ import { toast } from "react-toastify";
 
 
 const TENANT_API_BASE = import.meta.env.VITE_TENANT_API_BASE;
-const TENANT_API_KEY = import.meta.env.VITE_TENANT_API_KEY;
 
 class ApiService {
   private api: AxiosInstance;
@@ -15,9 +14,7 @@ class ApiService {
     this.api = axios.create({
       baseURL: TENANT_API_BASE,
       headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': TENANT_API_KEY,
-      },
+        'Content-Type': 'application/json',      },
     });
     this.api.interceptors.response.use(
       (response: AxiosResponse) => {
@@ -261,7 +258,6 @@ class ApiService {
       tenantId: domainId,
       row: rows
     }, {
-      headers: { "X-API-Key": TENANT_API_KEY },
     });
     return { message: `Uploaded` };
   }
