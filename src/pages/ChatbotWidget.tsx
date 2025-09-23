@@ -5,8 +5,7 @@ import remarkGfm from "remark-gfm";
 
 interface ChatbotWidgetProps {
   tenantId: string;
-    sessionId: string | null;  // add sessionId here
-
+  sessionId: string | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -19,30 +18,98 @@ interface Message {
   tenantId: string;
 }
 
-const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ tenantId, sessionId: propSessionId, isOpen, onClose }) => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      text: "Hello! How can I help you today?",
-      isUser: false,
-      timestamp: new Date(),
-      tenantId: tenantId
+// Helper functions for localStorage
+const getStoredChatData = (tenantId: string) => {
+  try {
+    const stored = localStorage.getItem(`chatbot-${tenantId}`);
+    if (stored) {
+      const data = JSON.parse(stored);
+      return {
+        messages: data.messages.map((msg: any) => ({
+          ...msg,
+          timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date() // fallback
+        })),
+        sessionId: data.sessionId
+      };
     }
-  ]);
+  } catch (error) {
+    console.error('Error loading chat data:', error);
+  }
+  return null;
+};
+
+
+const storeChatData = (tenantId: string, messages: Message[], sessionId: string | null) => {
+  try {
+    const data = {
+      messages: messages.map(msg => ({
+        ...msg,
+        timestamp: msg.timestamp.toISOString()
+      })),
+      sessionId,
+      lastUpdated: new Date().toISOString()
+    };
+    localStorage.setItem(`chatbot-${tenantId}`, JSON.stringify(data));
+  } catch (error) {
+    console.error('Error storing chat data:', error);
+  }
+};
+
+const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ tenantId, sessionId: propSessionId, isOpen, onClose }) => {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(propSessionId);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+const messageRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // Initialize chat data
+  useEffect(() => {
+    if (!isInitialized && tenantId) {
+      const storedData = getStoredChatData(tenantId);
+
+      if (storedData && storedData.messages.length > 0) {
+        setMessages(storedData.messages);
+        setSessionId(storedData.sessionId);
+      } else {
+        // Initial welcome message
+        setMessages([{
+          id: 1,
+          text: "Hello! How can I help you today?",
+          isUser: false,
+          timestamp: new Date(),
+          tenantId: tenantId
+        }]);
+      }
+      setIsInitialized(true);
+    }
+  }, [tenantId, isInitialized]);
+
+  // Store chat data whenever messages or sessionId change
+  useEffect(() => {
+    if (isInitialized && tenantId) {
+      storeChatData(tenantId, messages, sessionId);
+    }
+  }, [messages, sessionId, tenantId, isInitialized]);
+
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  const isUserNearBottom = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return true; // default scroll to bottom
+
+    const threshold = 50; // px from bottom
+    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
   };
 
   useEffect(() => {
-    scrollToBottom();
+    const container = messagesContainerRef.current;
+    if (!container) return;
   }, [messages]);
+
+
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -50,58 +117,80 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({ tenantId, sessionId: prop
     }
   }, [isOpen]);
 
-   useEffect(() => {
-    setSessionId(propSessionId); // sync prop changes
+  useEffect(() => {
+    setSessionId(propSessionId);
   }, [propSessionId]);
 
+  const sendMessage = async () => {
+    const message = inputValue.trim();
+    if (!message) return;
 
-const sendMessage = async () => {
-  const message = inputValue.trim();
-  if (!message) return;
+    const userMessage: Message = {
+      id: Date.now(),
+      text: message,
+      isUser: true,
+      timestamp: new Date(),
+      tenantId: tenantId
+    };
 
-  const userMessage: Message = {
-    id: Date.now(),
-    text: message,
-    isUser: true,
-    timestamp: new Date(),
-    tenantId: tenantId
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+    setIsTyping(true);
+
+    try {
+      const data = await apiService.sendChatMessage(tenantId, message, sessionId);
+
+      if (!sessionId && data.session_id) {
+        setSessionId(data.session_id);
+      }
+
+      const botMessage: Message = {
+        id: Date.now() + 1,
+        text: data.reply || 'Sorry, I did not understand.',
+        isUser: false,
+        timestamp: new Date(),
+        tenantId: tenantId
+      };
+
+setMessages(prev => {
+  const newMessages = [...prev, botMessage];
+
+  // Use setTimeout to wait for render
+  setTimeout(() => {
+    const ref = messageRefs.current[botMessage.id];
+    if (ref) {
+      ref.scrollIntoView({ behavior: 'smooth', block: 'start' }); // scroll to top of this message
+    }
+  }, 50);
+
+  return newMessages;
+});
+    } catch (error) {
+      console.error('Error:', error);
+      const errorMessage: Message = {
+        id: Date.now() + 1,
+        text: 'Sorry, I encountered an error. Please try again.',
+        isUser: false,
+        timestamp: new Date(),
+        tenantId: tenantId
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
-  setMessages(prev => [...prev, userMessage]);
-  setInputValue('');
-  setIsTyping(true);
-
-  try {
-    const data = await apiService.sendChatMessage(tenantId, message, sessionId);
-
-    if (!sessionId && data.session_id) {
-      setSessionId(data.session_id);
-    }
-
-    const botMessage: Message = {
-      id: Date.now() + 1,
-      text: data.reply || 'Sorry, I did not understand.',
+  // Add clear chat function
+  const clearChat = () => {
+    setMessages([{
+      id: 1,
+      text: "Hello! How can I help you today?",
       isUser: false,
       timestamp: new Date(),
       tenantId: tenantId
-    };
-
-    setMessages(prev => [...prev, botMessage]);
-  } catch (error) {
-    console.error('Error:', error);
-    const errorMessage: Message = {
-      id: Date.now() + 1,
-      text: 'Sorry, I encountered an error. Please try again.',
-      isUser: false,
-      timestamp: new Date(),
-      tenantId: tenantId
-    };
-    setMessages(prev => [...prev, errorMessage]);
-  } finally {
-    setIsTyping(false);
-  }
-};
-
+    }]);
+    localStorage.removeItem(`chatbot-${tenantId}`);
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -117,35 +206,44 @@ const sendMessage = async () => {
       <div className="chat-window">
         <div className="chat-header">
           <span>Chat Support</span>
-          <button 
-            className="close-button"
-            onClick={onClose}
-            aria-label="Close chat"
-          >
-            ×
-          </button>
+          <div className="header-buttons">
+            <button
+              className="clear-button"
+              onClick={clearChat}
+              aria-label="Clear chat history"
+              title="Clear chat history"
+            >
+              🗑️
+            </button>
+            <button
+              className="close-button"
+              onClick={onClose}
+              aria-label="Close chat"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
-        <div className="messages-container">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`message ${message.isUser ? 'user-message' : 'bot-message'}`}
-            >
-              <div className="message-bubble">
-                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
-    {message.text}
-  </ReactMarkdown>
-              </div>
-              <div className="message-time">
-                {message.timestamp.toLocaleTimeString([], { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </div>
-            </div>
-          ))}
-          
+        <div className="messages-container" ref={messagesContainerRef}>
+         {messages.map((message) => (
+  <div
+    key={message.id}
+    className={`message ${message.isUser ? 'user-message' : 'bot-message'}`}
+    ref={el => messageRefs.current[message.id] = el} // attach ref
+  >
+    <div className="message-bubble">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        {message.text}
+      </ReactMarkdown>
+    </div>
+    <div className="message-time">
+      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+    </div>
+  </div>
+))}
+
+
           {isTyping && (
             <div className="message bot-message">
               <div className="message-bubble typing-indicator">
@@ -157,8 +255,7 @@ const sendMessage = async () => {
               </div>
             </div>
           )}
-          
-          <div ref={messagesEndRef} />
+
         </div>
 
         <div className="input-area">
@@ -179,7 +276,7 @@ const sendMessage = async () => {
             aria-label="Send message"
           >
             <svg width="16" height="16" fill="white" viewBox="0 0 24 24">
-              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
             </svg>
           </button>
         </div>
@@ -227,6 +324,27 @@ const sendMessage = async () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
+        }
+
+        .header-buttons {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .clear-button {
+          background: rgba(255,255,255,0.2);
+          border: none;
+          color: white;
+          font-size: 14px;
+          cursor: pointer;
+          padding: 4px 8px;
+          border-radius: 4px;
+          transition: background 0.2s;
+        }
+
+        .clear-button:hover {
+          background: rgba(255,255,255,0.3);
         }
 
         .close-button {
