@@ -137,63 +137,24 @@ window.initChatbotWidget = function(config) {
 
   container.appendChild(widget);
 
-  // Inject CSS for bot message formatting
-const style = document.createElement('style');
-style.textContent = `
-  .message { display: flex; flex-direction: column; max-width: 80%; animation: fadeIn 0.3s ease-out; }
-  .user-message { align-self: flex-end; align-items: flex-end; }
-  .bot-message { align-self: flex-start; align-items: flex-start; }
-  .message-bubble {
-    padding: 12px 16px;
-    border-radius: 18px;
-    font-size: 14px;
-    line-height: 1.4;
-    word-wrap: break-word;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-  .user-message .message-bubble {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-bottom-right-radius: 4px;
-  }
-  .bot-message .message-bubble {
-    background: #e9ecef;
-    color: #495057;
-    border-bottom-left-radius: 4px;
-  }
-  .message-time {
-    font-size: 11px;
-    color: #6c757d;
-    margin-top: 4px;
-    padding: 0 4px;
-  }
-  .typing-indicator .message-bubble {
-    background: #e9ecef !important;
-    padding: 16px !important;
-  }
-  .typing-dots {
-    display: flex;
-    gap: 4px;
-  }
-  .typing-dots span {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #6c757d;
-    animation: typing 1.4s infinite ease-in-out;
-  }
-  @keyframes typing {
-    0%, 80%, 100% { transform: scale(0); }
-    40% { transform: scale(1); }
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-`;
-document.head.appendChild(style);
+  // CSS injection
+  const style = document.createElement('style');
+  style.textContent = `
+    .message { display: flex; flex-direction: column; max-width: 80%; animation: fadeIn 0.3s ease-out; }
+    .user-message { align-self: flex-end; align-items: flex-end; }
+    .bot-message { align-self: flex-start; align-items: flex-start; }
+    .message-bubble { padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; word-wrap: break-word; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .user-message .message-bubble { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-bottom-right-radius: 4px; }
+    .bot-message .message-bubble { background: #e9ecef; color: #495057; border-bottom-left-radius: 4px; }
+    .message-time { font-size: 11px; color: #6c757d; margin-top: 4px; padding: 0 4px; }
+    .typing-indicator .message-bubble { background: #e9ecef !important; padding: 16px !important; }
+    .typing-dots { display: flex; gap: 4px; }
+    .typing-dots span { width: 6px; height: 6px; border-radius: 50%; background: #6c757d; animation: typing 1.4s infinite ease-in-out; }
+    @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  `;
+  document.head.appendChild(style);
 
-  
   const messagesContainer = widget.querySelector('.messages-container');
   const toggleButton = widget.querySelector('.chatbot-toggle');
   const chatWindow = widget.querySelector('.chatbot-window');
@@ -203,20 +164,10 @@ document.head.appendChild(style);
   const sendButton = widget.querySelector('.send-button');
 
   let messages = [];
-let currentSessionId = null;
-const storedData = localStorage.getItem(`chatbot-${config.tenantId}`);
-if (storedData) {
-  try {
-    const parsed = JSON.parse(storedData);
-    currentSessionId = parsed.sessionId || null;
-  } catch(e) { console.error(e); }
-}
+  let currentSessionId = null;
   let isTyping = false;
 
-  const scrollToMessage = (messageEl) => {
-    if (messageEl) messageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
+  // Load chat from localStorage
   const getStoredChatData = () => {
     try {
       const stored = localStorage.getItem(`chatbot-${config.tenantId}`);
@@ -227,9 +178,8 @@ if (storedData) {
 
   const storeChatData = () => {
     try {
-localStorage.setItem(`chatbot-${config.tenantId}`, 
-  JSON.stringify({ messages, sessionId: currentSessionId })
-);    } catch(e) { console.error(e); }
+      localStorage.setItem(`chatbot-${config.tenantId}`, JSON.stringify({ messages, sessionId: currentSessionId }));
+    } catch(e) { console.error(e); }
   };
 
   const createMessage = (text, isUser) => {
@@ -240,12 +190,10 @@ localStorage.setItem(`chatbot-${config.tenantId}`,
     bubble.innerHTML = text;
     messageEl.appendChild(bubble);
     messagesContainer.appendChild(messageEl);
-
-    scrollToMessage(messageEl); // scroll to this message
+    messageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
     return messageEl;
   };
 
-  // Initialize chat
   const loadChatHistory = () => {
     const storedData = getStoredChatData();
     messagesContainer.innerHTML = '';
@@ -255,7 +203,7 @@ localStorage.setItem(`chatbot-${config.tenantId}`,
         const msgEl = createMessage(msg.text, msg.isUser);
         messages.push({ ...msg, element: msgEl });
       });
-      currentSessionId = storedData.sessionId || currentSessionId;
+      currentSessionId = storedData.sessionId || null;
     } else {
       const msgEl = createMessage(config.greetingMessage || "Hello! How can I help you?", false);
       messages.push({ id: 1, text: config.greetingMessage, isUser: false, element: msgEl });
@@ -264,14 +212,76 @@ localStorage.setItem(`chatbot-${config.tenantId}`,
 
   loadChatHistory();
 
+  // Open session API call
+  const openSession = async () => {
+    try {
+      const randomUserId = Math.floor(Math.random() * 10000).toString();
+      const response = await fetch(`${config.apiBase}/v1/open`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'tenantid': config.tenantId },
+        body: JSON.stringify({ user_id: randomUserId })
+      });
+      const data = await response.json();
+      if (data.session_id) {
+        currentSessionId = data.session_id;
+        storeChatData();
+      }
+    } catch(e) {
+      console.error("Failed to open session, using random fallback", e);
+      currentSessionId = Math.floor(Math.random() * 100) + 1;
+      storeChatData();
+    }
+  };
+
+  const sendMessage = async () => {
+    if (isTyping) return;
+    const message = messageInput.value.trim();
+    if (!message) return;
+
+    // Ensure session ID exists
+    if (!currentSessionId) await openSession();
+
+    const userEl = createMessage(message, true);
+    messages.push({ id: Date.now(), text: message, isUser: true, element: userEl });
+    messageInput.value = '';
+    isTyping = true;
+
+    const typingEl = createMessage('...', false);
+    typingEl.classList.add('typing-indicator');
+
+    try {
+      const response = await fetch(`${config.apiBase}/v1/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'tenantid': config.tenantId },
+        body: JSON.stringify({ message, session_id: currentSessionId })
+      });
+      const data = await response.json();
+      messagesContainer.removeChild(typingEl);
+
+      if (data.session_id) {
+        currentSessionId = data.session_id;
+        storeChatData();
+      }
+
+      const botEl = createMessage(data.reply || 'Sorry, I did not understand.', false);
+      messages.push({ id: Date.now(), text: data.reply || '', isUser: false, element: botEl });
+      storeChatData();
+    } catch(e) {
+      console.error(e);
+      messagesContainer.removeChild(typingEl);
+      const botEl = createMessage('Sorry, I encountered an error.', false);
+      messages.push({ id: Date.now(), text: 'Error', isUser: false, element: botEl });
+    } finally {
+      isTyping = false;
+    }
+  };
+
+  // Event listeners
   toggleButton.addEventListener('click', () => {
-    const isVisible = chatWindow.style.display === 'flex';
-    chatWindow.style.display = isVisible ? 'none' : 'flex';
+    chatWindow.style.display = chatWindow.style.display === 'flex' ? 'none' : 'flex';
   });
 
-  closeButton.addEventListener('click', () => {
-    chatWindow.style.display = 'none';
-  });
+  closeButton.addEventListener('click', () => chatWindow.style.display = 'none');
 
   clearButton.addEventListener('click', () => {
     messagesContainer.innerHTML = '';
@@ -279,61 +289,9 @@ localStorage.setItem(`chatbot-${config.tenantId}`,
     localStorage.removeItem(`chatbot-${config.tenantId}`);
     const msgEl = createMessage(config.greetingMessage || "Hello! How can I help you?", false);
     messages.push({ id: 1, text: config.greetingMessage, isUser: false, element: msgEl });
+    currentSessionId = null;
   });
 
- const sendMessage = async () => {
-  if (isTyping) return;
-  const message = messageInput.value.trim();
-  if (!message) return;
-
-  // Ensure we have a session ID
-if (!currentSessionId) {
-  currentSessionId = Math.floor(Math.random() * 1000000); // random int between 0 and 999999
-  storeChatData();
-}
-
-
-  // Add user message
-  const userEl = createMessage(message, true);
-  messages.push({ id: Date.now(), text: message, isUser: true, element: userEl });
-  messageInput.value = '';
-  isTyping = true;
-
-  // Typing indicator
-  const typingEl = createMessage('...', false);
-  typingEl.classList.add('typing-indicator');
-
-  try {
-    const response = await fetch(`${config.apiBase}/v1/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'tenantid': config.tenantId },
-      body: JSON.stringify({ message, session_id: currentSessionId }) // always valid
-    });
-
-    const data = await response.json();
-    messagesContainer.removeChild(typingEl);
-
-    // Update session id if backend returns one
-    if (data.session_id) {
-      currentSessionId = data.session_id;
-      storeChatData(); // persist
-    }
-
-    const botEl = createMessage(data.reply || 'Sorry, I did not understand.', false);
-    messages.push({ id: Date.now(), text: data.reply || '', isUser: false, element: botEl });
-
-    storeChatData();
-  } catch (e) {
-    console.error(e);
-    messagesContainer.removeChild(typingEl);
-    const botEl = createMessage('Sorry, I encountered an error.', false);
-    messages.push({ id: Date.now(), text: 'Error', isUser: false, element: botEl });
-  } finally {
-    isTyping = false;
-  }
-};
-
-
   sendButton.addEventListener('click', sendMessage);
-  messageInput.addEventListener('keypress', (e) => { if(e.key==='Enter') sendMessage(); });
+  messageInput.addEventListener('keypress', e => { if(e.key==='Enter') sendMessage(); });
 };
