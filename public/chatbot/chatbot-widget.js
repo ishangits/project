@@ -287,10 +287,11 @@ localStorage.setItem(`chatbot-${config.tenantId}`,
   if (!message) return;
 
   // Ensure we have a session ID
-  if (!currentSessionId) {
-    currentSessionId = crypto.randomUUID(); // generate new session ID
-    storeChatData(); // save it immediately
-  }
+if (!currentSessionId) {
+  currentSessionId = Math.floor(Math.random() * 1000000); // random int between 0 and 999999
+  storeChatData();
+}
+
 
   // Add user message
   const userEl = createMessage(message, true);
