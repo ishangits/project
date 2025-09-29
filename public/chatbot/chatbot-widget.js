@@ -281,48 +281,57 @@ localStorage.setItem(`chatbot-${config.tenantId}`,
     messages.push({ id: 1, text: config.greetingMessage, isUser: false, element: msgEl });
   });
 
-  const sendMessage = async () => {
-    if (isTyping) return;
-    const message = messageInput.value.trim();
-    if (!message) return;
+ const sendMessage = async () => {
+  if (isTyping) return;
+  const message = messageInput.value.trim();
+  if (!message) return;
 
-    // Add user message
-    const userEl = createMessage(message, true);
-    messages.push({ id: Date.now(), text: message, isUser: true, element: userEl });
-    messageInput.value = '';
-    isTyping = true;
+  // Ensure we have a session ID
+  if (!currentSessionId) {
+    currentSessionId = crypto.randomUUID(); // generate new session ID
+    storeChatData(); // save it immediately
+  }
 
-    // Typing indicator
-    const typingEl = createMessage('...', false);
-    typingEl.classList.add('typing-indicator');
+  // Add user message
+  const userEl = createMessage(message, true);
+  messages.push({ id: Date.now(), text: message, isUser: true, element: userEl });
+  messageInput.value = '';
+  isTyping = true;
 
-    try {
-      const response = await fetch(`${config.apiBase}/v1/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'tenantid': config.tenantId },
-        body: JSON.stringify({ message, session_id: currentSessionId })
-      });
-      const data = await response.json();
-      messagesContainer.removeChild(typingEl);
+  // Typing indicator
+  const typingEl = createMessage('...', false);
+  typingEl.classList.add('typing-indicator');
 
-      // ✅ Update session id if backend returns one
-if (data.session_id) {
-  currentSessionId = data.session_id;
-  storeChatData(); // persist to localStorage
-}
-      const botEl = createMessage(data.reply || 'Sorry, I did not understand.', false);
-      messages.push({ id: Date.now(), text: data.reply, isUser: false, element: botEl });
+  try {
+    const response = await fetch(`${config.apiBase}/v1/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'tenantid': config.tenantId },
+      body: JSON.stringify({ message, session_id: currentSessionId }) // always valid
+    });
 
-      storeChatData();
-    } catch(e) {
-      console.error(e);
-      messagesContainer.removeChild(typingEl);
-      const botEl = createMessage('Sorry, I encountered an error.', false);
-      messages.push({ id: Date.now(), text: 'Error', isUser: false, element: botEl });
-    } finally {
-      isTyping = false;
+    const data = await response.json();
+    messagesContainer.removeChild(typingEl);
+
+    // Update session id if backend returns one
+    if (data.session_id) {
+      currentSessionId = data.session_id;
+      storeChatData(); // persist
     }
-  };
+
+    const botEl = createMessage(data.reply || 'Sorry, I did not understand.', false);
+    messages.push({ id: Date.now(), text: data.reply || '', isUser: false, element: botEl });
+
+    storeChatData();
+  } catch (e) {
+    console.error(e);
+    messagesContainer.removeChild(typingEl);
+    const botEl = createMessage('Sorry, I encountered an error.', false);
+    messages.push({ id: Date.now(), text: 'Error', isUser: false, element: botEl });
+  } finally {
+    isTyping = false;
+  }
+};
+
 
   sendButton.addEventListener('click', sendMessage);
   messageInput.addEventListener('keypress', (e) => { if(e.key==='Enter') sendMessage(); });
