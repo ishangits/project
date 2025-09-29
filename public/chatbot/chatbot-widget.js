@@ -203,7 +203,14 @@ document.head.appendChild(style);
   const sendButton = widget.querySelector('.send-button');
 
   let messages = [];
-  let currentSessionId = localStorage.getItem(`chat_session_${config.tenantId}`) || null;
+let currentSessionId = null;
+const storedData = localStorage.getItem(`chatbot-${config.tenantId}`);
+if (storedData) {
+  try {
+    const parsed = JSON.parse(storedData);
+    currentSessionId = parsed.sessionId || null;
+  } catch(e) { console.error(e); }
+}
   let isTyping = false;
 
   const scrollToMessage = (messageEl) => {
@@ -220,8 +227,9 @@ document.head.appendChild(style);
 
   const storeChatData = () => {
     try {
-      localStorage.setItem(`chatbot-${config.tenantId}`, JSON.stringify({ messages, sessionId: currentSessionId }));
-    } catch(e) { console.error(e); }
+localStorage.setItem(`chatbot-${config.tenantId}`, 
+  JSON.stringify({ messages, sessionId: currentSessionId })
+);    } catch(e) { console.error(e); }
   };
 
   const createMessage = (text, isUser) => {
@@ -297,6 +305,11 @@ document.head.appendChild(style);
       const data = await response.json();
       messagesContainer.removeChild(typingEl);
 
+      // ✅ Update session id if backend returns one
+if (data.session_id) {
+  currentSessionId = data.session_id;
+  storeChatData(); // persist to localStorage
+}
       const botEl = createMessage(data.reply || 'Sorry, I did not understand.', false);
       messages.push({ id: Date.now(), text: data.reply, isUser: false, element: botEl });
 
