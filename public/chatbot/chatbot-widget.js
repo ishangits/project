@@ -19,11 +19,11 @@ window.initChatbotWidget = function(config) {
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       z-index: 9999;
     ">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
         <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" fill="white"/>
       </svg>
     </div>
-    
+
     <div class="chatbot-window" style="
       position: fixed;
       ${config.position.includes('right') ? 'right: 20px;' : 'left: 20px;'}
@@ -75,7 +75,7 @@ window.initChatbotWidget = function(config) {
           ">×</button>
         </div>
       </div>
-      
+
       <div class="messages-container" style="
         flex: 1;
         overflow-y: auto;
@@ -85,7 +85,7 @@ window.initChatbotWidget = function(config) {
         flex-direction: column;
         gap: 12px;
       "></div>
-      
+
       <div class="input-area" style="
         padding: 16px;
         border-top: 1px solid #e1e8ed;
@@ -119,7 +119,7 @@ window.initChatbotWidget = function(config) {
           </svg>
         </button>
       </div>
-      
+
       ${config.showBranding ? `
       <div class="chatbot-branding" style="
         padding: 8px;
@@ -227,7 +227,7 @@ window.initChatbotWidget = function(config) {
         storeChatData();
       }
     } catch(e) {
-      console.error("Failed to open session, using random fallback", e);
+      console.error("Failed to open session, using fallback", e);
       currentSessionId = Math.floor(Math.random() * 100) + 1;
       storeChatData();
     }
@@ -238,7 +238,6 @@ window.initChatbotWidget = function(config) {
     const message = messageInput.value.trim();
     if (!message) return;
 
-    // Ensure session ID exists
     if (!currentSessionId) await openSession();
 
     const userEl = createMessage(message, true);
@@ -276,9 +275,16 @@ window.initChatbotWidget = function(config) {
     }
   };
 
-  // Event listeners
-  toggleButton.addEventListener('click', () => {
-    chatWindow.style.display = chatWindow.style.display === 'flex' ? 'none' : 'flex';
+  // ✅ Event listeners
+  toggleButton.addEventListener('click', async () => {
+    if (chatWindow.style.display === 'flex') {
+      chatWindow.style.display = 'none';
+    } else {
+      chatWindow.style.display = 'flex';
+      if (!currentSessionId) {
+        await openSession(); // open session on click
+      }
+    }
   });
 
   closeButton.addEventListener('click', () => chatWindow.style.display = 'none');
