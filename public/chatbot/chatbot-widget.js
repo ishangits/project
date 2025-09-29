@@ -276,16 +276,16 @@ window.initChatbotWidget = function(config) {
   };
 
   // ✅ Event listeners
-  toggleButton.addEventListener('click', async () => {
-    if (chatWindow.style.display === 'flex') {
-      chatWindow.style.display = 'none';
-    } else {
-      chatWindow.style.display = 'flex';
-      if (!currentSessionId) {
-        await openSession(); // open session on click
-      }
-    }
-  });
+toggleButton.addEventListener('click', async () => {
+  const isOpen = chatWindow.style.display === 'flex';
+  chatWindow.style.display = isOpen ? 'none' : 'flex';
+  
+  // Call open session only when opening
+  if (!isOpen && !currentSessionId) {
+    await openSession();
+  }
+});
+
 
   closeButton.addEventListener('click', () => chatWindow.style.display = 'none');
 
