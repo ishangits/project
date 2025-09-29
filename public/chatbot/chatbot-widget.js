@@ -214,6 +214,8 @@ window.initChatbotWidget = function(config) {
 
   // Open session API call
   const openSession = async () => {
+      console.log('openSession called'); // <-- verify this
+
     try {
       const randomUserId = Math.floor(Math.random() * 10000).toString();
       const response = await fetch(`${config.apiBase}/v1/open`, {
@@ -274,17 +276,23 @@ window.initChatbotWidget = function(config) {
       isTyping = false;
     }
   };
+  console.log('currentSessionId before toggle:', currentSessionId);
+
 
   // ✅ Event listeners
 toggleButton.addEventListener('click', async () => {
-  const isOpen = chatWindow.style.display === 'flex';
-  chatWindow.style.display = isOpen ? 'none' : 'flex';
-  
-  // Call open session only when opening
-  if (!isOpen && !currentSessionId) {
+    console.log('Toggle clicked');
+    chatWindow.style.display = chatWindow.style.display === 'flex' ? 'none' : 'flex';
+
+    console.log('Calling openSession (forced)');
     await openSession();
-  }
+    console.log('Current Session ID:', currentSessionId);
 });
+
+
+
+
+
 
 
   closeButton.addEventListener('click', () => chatWindow.style.display = 'none');

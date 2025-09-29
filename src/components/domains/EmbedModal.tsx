@@ -99,7 +99,9 @@ const EmbedModal: React.FC<EmbedModalProps> = ({
     
     // Load chatbot script
     var script = document.createElement('script');
-script.src = "${import.meta.env.VITE_TENANT_CHATBOT_API}/chatbot/chatbot-widget.js";
+    script.src = "/chatbot/chatbot-widget.js";
+
+// script.src = "${import.meta.env.VITE_TENANT_CHATBOT_API}/chatbot/chatbot-widget.js";
     script.onload = function() {
       window.initChatbotWidget(chatbotConfig);
     };
