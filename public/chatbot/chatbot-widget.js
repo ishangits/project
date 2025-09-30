@@ -137,23 +137,72 @@ window.initChatbotWidget = function(config) {
 
   container.appendChild(widget);
 
-  // CSS injection
-  const style = document.createElement('style');
-  style.textContent = `
-    .message { display: flex; flex-direction: column; max-width: 80%; animation: fadeIn 0.3s ease-out; }
-    .user-message { align-self: flex-end; align-items: flex-end; }
-    .bot-message { align-self: flex-start; align-items: flex-start; }
-    .message-bubble { padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; word-wrap: break-word; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .user-message .message-bubble { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-bottom-right-radius: 4px; }
-    .bot-message .message-bubble { background: #e9ecef; color: #495057; border-bottom-left-radius: 4px; }
-    .message-time { font-size: 11px; color: #6c757d; margin-top: 4px; padding: 0 4px; }
-    .typing-indicator .message-bubble { background: #e9ecef !important; padding: 16px !important; }
-    .typing-dots { display: flex; gap: 4px; }
-    .typing-dots span { width: 6px; height: 6px; border-radius: 50%; background: #6c757d; animation: typing 1.4s infinite ease-in-out; }
-    @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  `;
-  document.head.appendChild(style);
+ // CSS injection
+const style = document.createElement('style');
+style.textContent = `
+  .message { display: flex; flex-direction: column; max-width: 80%; animation: fadeIn 0.3s ease-out; }
+  .user-message { align-self: flex-end; align-items: flex-end; }
+  .bot-message { align-self: flex-start; align-items: flex-start; }
+  .message-bubble { padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; word-wrap: break-word; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  .user-message .message-bubble { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-bottom-right-radius: 4px; }
+  .bot-message .message-bubble { background: #e9ecef; color: #495057; border-bottom-left-radius: 4px; }
+  
+  /* Enhanced markdown styling for bot messages */
+  .bot-message .message-bubble h1, 
+  .bot-message .message-bubble h2, 
+  .bot-message .message-bubble h3, 
+  .bot-message .message-bubble h4, 
+  .bot-message .message-bubble h5, 
+  .bot-message .message-bubble h6 {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    margin: 8px 0 4px 0 !important;
+    line-height: 1.3 !important;
+  }
+  
+  .bot-message .message-bubble p {
+    margin: 6px 0 !important;
+    line-height: 1.4 !important;
+  }
+  
+  .bot-message .message-bubble ul, 
+  .bot-message .message-bubble ol {
+    margin: 6px 0 !important;
+    padding-left: 20px !important;
+  }
+  
+  .bot-message .message-bubble li {
+    margin: 3px 0 !important;
+    line-height: 1.4 !important;
+  }
+  
+  .bot-message .message-bubble strong {
+    font-weight: 600 !important;
+  }
+  
+  .bot-message .message-bubble em {
+    font-style: italic !important;
+  }
+  
+  /* Ensure all text in bot messages has consistent size */
+  .bot-message .message-bubble {
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+  }
+  
+  .bot-message .message-bubble * {
+    font-size: inherit !important;
+    line-height: inherit !important;
+  }
+  
+  .message-time { font-size: 11px; color: #6c757d; margin-top: 4px; padding: 0 4px; }
+  .typing-indicator .message-bubble { background: #e9ecef !important; padding: 16px !important; }
+  .typing-dots { display: flex; gap: 4px; }
+  .typing-dots span { width: 6px; height: 6px; border-radius: 50%; background: #6c757d; animation: typing 1.4s infinite ease-in-out; }
+  @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+`;
+document.head.appendChild(style);
 
   const messagesContainer = widget.querySelector('.messages-container');
   const toggleButton = widget.querySelector('.chatbot-toggle');
