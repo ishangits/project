@@ -182,17 +182,24 @@ window.initChatbotWidget = function(config) {
     } catch(e) { console.error(e); }
   };
 
-  const createMessage = (text, isUser) => {
-    const messageEl = document.createElement('div');
-    messageEl.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
-    const bubble = document.createElement('div');
-    bubble.className = 'message-bubble';
-    bubble.innerHTML = text;
-    messageEl.appendChild(bubble);
-    messagesContainer.appendChild(messageEl);
-    messageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    return messageEl;
-  };
+const createMessage = (text, isUser) => {
+  const messageEl = document.createElement('div');
+  messageEl.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+  const bubble = document.createElement('div');
+  bubble.className = 'message-bubble';
+
+  // Parse markdown only for bot replies
+  if (!isUser && window.marked) {
+    bubble.innerHTML = marked.parse(text || '');
+  } else {
+    bubble.textContent = text || '';
+  }
+
+  messageEl.appendChild(bubble);
+  messagesContainer.appendChild(messageEl);
+  messageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  return messageEl;
+};
 
   const loadChatHistory = () => {
     const storedData = getStoredChatData();
